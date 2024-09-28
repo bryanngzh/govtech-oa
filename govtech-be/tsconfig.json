@@ -16,6 +16,9 @@
     "noImplicitThis": true,
     "alwaysStrict": true,
 
+    /* JSON */
+    "resolveJsonModule": true,
+
     /* Additional Checks */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
