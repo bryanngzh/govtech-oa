@@ -8,7 +8,7 @@ import {
   Route,
   SuccessResponse,
 } from "tsoa";
-import { Match } from "../models/matchModel";
+import { Match, TeamStat } from "../models/matchModel";
 import { MatchService } from "../services/matchService";
 
 @Route("matches")
@@ -25,16 +25,13 @@ export class MatchController extends Controller {
   }
 
   @Get("team-stats")
-  public async getTeamStats(@Query("teamId") teamId?: string): Promise<{
-    totalMatches: number;
-    wins: number;
-    losses: number;
-    draws: number;
-  } | null> {
+  public async getTeamStats(
+    @Query("teamId") teamId?: string
+  ): Promise<TeamStat | TeamStat[] | null> {
     if (teamId) {
       return this.matchService.getTeamStats(teamId);
     } else {
-      return null;
+      return this.matchService.getAllTeamStats();
     }
   }
 
