@@ -11,7 +11,7 @@ import { User } from "../models/userModel";
 import { UserService } from "../services/userService";
 
 @Route("users")
-export class UsersController extends Controller {
+export class UserController extends Controller {
   @Get()
   public async getUser(@Query() email: string): Promise<User | null> {
     const userService = new UserService();
