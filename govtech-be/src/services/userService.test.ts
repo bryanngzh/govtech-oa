@@ -30,16 +30,17 @@ describe("UserService", () => {
   });
 
   describe("get", () => {
-    it("should return null if user not found", async () => {
+    it("should throw an error if user not found", async () => {
       const mockQuerySnapshot = {
         empty: true,
         docs: [],
       };
       mockGet.mockResolvedValue(mockQuerySnapshot);
 
-      const result = await userService.get("nonexistent@example.com");
+      await expect(userService.get("nonexistent@example.com")).rejects.toThrow(
+        "User with email nonexistent@example.com not found."
+      );
 
-      expect(result).toBeNull();
       expect(mockCollection).toHaveBeenCalledWith("users");
       expect(mockWhere).toHaveBeenCalledWith(
         "email",
@@ -54,13 +55,17 @@ describe("UserService", () => {
         name: "John Doe",
         email: "john@example.com",
       };
+
       const mockDocSnapshot = {
+        id: "123",
         data: () => mockUser,
       };
+
       const mockQuerySnapshot = {
         empty: false,
         docs: [mockDocSnapshot],
       };
+
       mockGet.mockResolvedValue(mockQuerySnapshot);
 
       const result = await userService.get("john@example.com");
