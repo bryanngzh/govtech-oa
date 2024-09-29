@@ -24,6 +24,20 @@ export class MatchController extends Controller {
     }
   }
 
+  @Get("team-stats")
+  public async getTeamStats(@Query("teamId") teamId?: string): Promise<{
+    totalMatches: number;
+    wins: number;
+    losses: number;
+    draws: number;
+  } | null> {
+    if (teamId) {
+      return this.matchService.getTeamStats(teamId);
+    } else {
+      return null;
+    }
+  }
+
   @SuccessResponse("201", "Created")
   @Post()
   public async createOrUpdateMatch(@Body() requestBody: Match): Promise<Match> {
