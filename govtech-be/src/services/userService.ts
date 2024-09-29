@@ -3,21 +3,22 @@ import { User } from "../models/userModel";
 
 export class UserService {
   public async get(userEmail: string): Promise<User | null> {
-    const userSnapshot = await db
-      .collection("users")
-      .where("email", "==", userEmail)
-      .get();
+    const userRef = db.collection("users").where("email", "==", userEmail);
+    const userSnapshot = await userRef.get();
 
     if (userSnapshot.empty) {
-      return null;
+      throw new Error(`User with email ${userEmail} not found.`);
     }
 
-    const userData = userSnapshot.docs[0].data();
+    const userDoc = userSnapshot.docs[0];
+    const userData = userDoc.data();
+
     const user: User = {
-      id: userData.id,
+      id: userDoc.id,
       name: userData.name,
       email: userData.email,
     };
+
     return user;
   }
 

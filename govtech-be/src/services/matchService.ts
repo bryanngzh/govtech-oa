@@ -1,34 +1,53 @@
 import { QueryDocumentSnapshot } from "firebase-admin/firestore";
+import { Team } from "src/models/teamModel";
 import { db } from "../configs/firebase";
-import { Match } from "../models/matchModel";
+import { Match, TeamStat } from "../models/matchModel";
 
 export class MatchService {
-  public async get(id: string): Promise<Match | null> {
+  public async get(id: string): Promise<Match> {
     const matchSnapshot = await db.collection("matches").doc(id).get();
     if (!matchSnapshot.exists) {
-      return null;
+      throw new Error(`Match with ID ${id} not found.`);
     }
     const matchData = matchSnapshot.data();
-    let match: Match | null = null;
     if (matchData) {
-      match = {
-        id: matchData.id,
+      return {
+        id: matchSnapshot.id,
         teamA: matchData.teamA,
         teamB: matchData.teamB,
         scoreA: matchData.scoreA,
         scoreB: matchData.scoreB,
       };
     }
-    return match;
+    throw new Error(`Match with ID ${id} has no data.`);
   }
 
-  public async getTeamStats(teamId: string): Promise<{
-    totalMatches: number;
-    wins: number;
-    losses: number;
-    draws: number;
-  } | null> {
-    const matchSnapshot = await db
+  public async getAllTeamStats(): Promise<TeamStat[] | null> {
+    const teamsSnapshot = await db.collection("teams").get();
+    const teams: Team[] = [];
+
+    if (teamsSnapshot) {
+      teamsSnapshot.forEach((doc: QueryDocumentSnapshot) => {
+        const teamData = doc.data();
+        teams.push({
+          id: doc.id,
+          name: teamData.name,
+          regDate: teamData.regDate,
+          group: teamData.group,
+        });
+      });
+    }
+
+    const teamStatsPromises = teams.map((team) =>
+      this.getTeamStats(team.id as string)
+    );
+    const teamStats = await Promise.all(teamStatsPromises);
+
+    return teamStats.filter((stat) => stat !== null) as TeamStat[];
+  }
+
+  public async getTeamStats(teamId: string): Promise<TeamStat | null> {
+    const matchSnapshotA = await db
       .collection("matches")
       .where("teamA", "==", teamId)
       .get();
@@ -57,21 +76,23 @@ export class MatchService {
         losses++;
       }
     };
-    if (matchSnapshot) {
-      matchSnapshot.forEach((doc) => {
+
+    if (matchSnapshotA) {
+      matchSnapshotA.docs.forEach((doc) => {
         const matchData = doc.data();
         processMatch(matchData, true);
       });
     }
 
     if (matchSnapshotB) {
-      matchSnapshotB.forEach((doc) => {
+      matchSnapshotB.docs.forEach((doc) => {
         const matchData = doc.data();
         processMatch(matchData, false);
       });
     }
 
     return {
+      id: teamId,
       totalMatches,
       wins,
       losses,
@@ -83,6 +104,7 @@ export class MatchService {
     const matchRef = match.id
       ? db.collection("matches").doc(match.id)
       : db.collection("matches").doc();
+
     if (match.id) {
       const matchSnapshot = await matchRef.get();
       if (!matchSnapshot.exists) {
@@ -91,6 +113,7 @@ export class MatchService {
         );
       }
     }
+
     await matchRef.set({
       teamA: match.teamA,
       teamB: match.teamB,
@@ -118,11 +141,21 @@ export class MatchService {
       });
     }
 
+    if (matches.length === 0) {
+      throw new Error("No matches found.");
+    }
+
     return matches;
   }
 
   public async delete(id: string): Promise<void> {
     const matchRef = db.collection("matches").doc(id);
+    const matchSnapshot = await matchRef.get();
+
+    if (!matchSnapshot.exists) {
+      throw new Error(`Match with ID ${id} does not exist. Cannot delete.`);
+    }
+
     await matchRef.delete();
   }
 }
