@@ -22,24 +22,26 @@ export class TeamService {
   }
 
   public async createOrUpdate(team: Team): Promise<Team> {
-    const teamRef = db.collection("teams").doc(team.id ?? "");
-    const teamSnapshot = await teamRef.get();
-    if (!teamSnapshot.exists) {
-      const newTeamRef = db.collection("teams").doc();
-      await newTeamRef.set({
-        name: team.name,
-        regDate: team.regDate,
-        group: team.group,
-      });
-      return team;
-    } else {
-      await teamRef.update({
-        name: team.name,
-        regDate: team.regDate,
-        group: team.group,
-      });
-      return team;
+    const teamRef = team.id
+      ? db.collection("teams").doc(team.id)
+      : db.collection("teams").doc();
+
+    if (team.id) {
+      const teamSnapshot = await teamRef.get();
+      if (!teamSnapshot.exists) {
+        throw new Error(
+          `Team with ID ${team.id} does not exist. Please provide a valid ID to update.`
+        );
+      }
     }
+
+    await teamRef.set({
+      name: team.name,
+      regDate: team.regDate,
+      group: team.group,
+    });
+
+    return { ...team, id: teamRef.id };
   }
 
   public async getAll(): Promise<Team[]> {
