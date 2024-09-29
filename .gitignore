@@ -3,3 +3,4 @@ govtech-be/serviceAccountKey.json
 **/package-lock.json
 **/build
 **/.env
+**/coverage
