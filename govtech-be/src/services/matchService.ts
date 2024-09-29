@@ -31,7 +31,6 @@ export class MatchService {
         const teamData = doc.data();
         teams.push({
           id: doc.id,
-          name: teamData.name,
           regDate: teamData.regDate,
           group: teamData.group,
         });

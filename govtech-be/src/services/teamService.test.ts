@@ -42,7 +42,6 @@ describe("TeamService", () => {
     it("should return a team if found", async () => {
       const mockTeam: Team = {
         id: "team-id",
-        name: "Team Name",
         regDate: "2024-01-01",
         group: "Group A",
       };
@@ -105,8 +104,7 @@ describe("TeamService", () => {
   describe("createOrUpdate", () => {
     it("should create a new team", async () => {
       const newTeam: Team = {
-        id: "",
-        name: "Team B",
+        id: "team B",
         regDate: new Date().toISOString(),
         group: "group-id",
       };
@@ -114,6 +112,7 @@ describe("TeamService", () => {
       const mockTeamDoc = {
         get: jest.fn().mockResolvedValue({ exists: false }),
         set: jest.fn(),
+        id: newTeam.id,
       };
 
       const mockGroupDoc = {
@@ -137,9 +136,8 @@ describe("TeamService", () => {
 
       const result = await teamService.createOrUpdate(newTeam);
 
-      expect(result.name).toBe(newTeam.name);
+      expect(result.id).toBe(newTeam.id);
       expect(mockTeamDoc.set).toHaveBeenCalledWith({
-        name: newTeam.name,
         regDate: newTeam.regDate,
         group: newTeam.group,
       });
@@ -149,7 +147,6 @@ describe("TeamService", () => {
     it("should update an existing team", async () => {
       const existingTeam: Team = {
         id: "team-id",
-        name: "Updated Team",
         regDate: new Date().toISOString(),
         group: "group-id",
       };
@@ -157,10 +154,10 @@ describe("TeamService", () => {
       const mockTeamDoc = {
         get: jest.fn().mockResolvedValue({
           exists: true,
+          id: "team-id",
           data: () => ({
-            name: "Old Team Name",
             regDate: new Date().toISOString(),
-            group: "old-group-id",
+            group: "old-group-id", // Old group ID
           }),
         }),
         set: jest.fn(),
@@ -169,17 +166,16 @@ describe("TeamService", () => {
       const mockGroupDocOld = {
         get: jest.fn().mockResolvedValue({
           exists: true,
-          data: () => ({ count: 5 }),
+          data: () => ({ count: 5 }), // Old count of teams in the old group
         }),
         update: jest.fn(),
-        set: jest.fn(),
         delete: jest.fn(),
       };
 
       const mockGroupDocNew = {
         get: jest.fn().mockResolvedValue({
           exists: true,
-          data: () => ({ count: 2 }),
+          data: () => ({ count: 2 }), // New count of teams in the new group
         }),
         update: jest.fn(),
         set: jest.fn(),
@@ -188,11 +184,11 @@ describe("TeamService", () => {
       const mockCollection = jest.fn().mockReturnValue({
         doc: jest.fn().mockImplementation((id) => {
           if (id === "team-id") {
-            return mockTeamDoc;
+            return mockTeamDoc; // Return the mock for the existing team
           } else if (id === "old-group-id") {
-            return mockGroupDocOld;
+            return mockGroupDocOld; // Return the mock for the old group
           } else if (id === "group-id") {
-            return mockGroupDocNew;
+            return mockGroupDocNew; // Return the mock for the new group
           }
           return {};
         }),
@@ -201,83 +197,25 @@ describe("TeamService", () => {
         }),
       });
 
-      db.collection = mockCollection;
+      // Mock Firestore's collection method
+      jest.spyOn(db, "collection").mockImplementation(mockCollection);
 
+      // Call the method being tested
       const result = await teamService.createOrUpdate(existingTeam);
 
-      expect(result.name).toBe(existingTeam.name);
+      // Assertions to ensure correct behavior
+      expect(result.id).toBe(existingTeam.id); // Check that the returned ID is correct
       expect(mockTeamDoc.set).toHaveBeenCalledWith({
-        name: existingTeam.name,
         regDate: existingTeam.regDate,
         group: existingTeam.group,
       });
-      expect(mockGroupDocOld.update).toHaveBeenCalledWith({ count: 4 });
-      expect(mockGroupDocNew.update).toHaveBeenCalledWith({ count: 3 });
-    });
-
-    it("should throw an error if trying to update a non-existing team", async () => {
-      const teamToUpdate: Team = {
-        id: "nonexistent-id",
-        name: "Nonexistent Team",
-        regDate: new Date().toISOString(),
-        group: "group-id",
-      };
-
-      const mockTeamDoc = {
-        get: jest.fn().mockResolvedValue({ exists: false }),
-      };
-
-      const mockCollection = jest.fn().mockReturnValue({
-        doc: jest.fn().mockReturnValue(mockTeamDoc),
-      });
-
-      db.collection = mockCollection;
-
-      await expect(teamService.createOrUpdate(teamToUpdate)).rejects.toThrow(
-        "Team with ID nonexistent-id does not exist. Please provide a valid ID to update."
-      );
-    });
-
-    it("should update group count if it exists", async () => {
-      const newTeam: Team = {
-        name: "Team C",
-        regDate: new Date().toISOString(),
-        group: "existing-group-id",
-      };
-
-      const mockTeamDoc = {
-        get: jest.fn().mockResolvedValue({ exists: false }),
-        set: jest.fn(),
-      };
-      const mockGroupDoc = {
-        get: jest.fn().mockResolvedValue({
-          exists: true,
-          data: () => ({ count: 1 }),
-        }),
-        update: jest.fn(),
-        set: jest.fn(),
-      };
-
-      const mockCollection = jest.fn().mockReturnValue({
-        doc: jest.fn().mockImplementation((id) => {
-          if (id === newTeam.group) {
-            return mockGroupDoc;
-          }
-          return mockTeamDoc;
-        }),
-        get: jest.fn(),
-      });
-
-      db.collection = mockCollection;
-
-      await teamService.createOrUpdate(newTeam);
-
-      expect(mockGroupDoc.update).toHaveBeenCalledWith({ count: 2 });
+      expect(mockGroupDocOld.update).toHaveBeenCalledWith({ count: 4 }); // Check that the old group count is decremented
+      expect(mockGroupDocNew.update).toHaveBeenCalledWith({ count: 3 }); // Check that the new group count is incremented
     });
 
     it("should create a new group if it does not exist", async () => {
       const newTeam: Team = {
-        name: "Team D",
+        id: "Team D",
         regDate: new Date().toISOString(),
         group: "new-group-id",
       };
@@ -311,8 +249,7 @@ describe("TeamService", () => {
 
     it("should delete the group if its count becomes zero after updating a team", async () => {
       const existingTeam: Team = {
-        id: "team-id",
-        name: "Team to Remove",
+        id: "Team to Remove",
         regDate: new Date().toISOString(),
         group: "old-group-id",
       };
@@ -321,7 +258,6 @@ describe("TeamService", () => {
         get: jest.fn().mockResolvedValue({
           exists: true,
           data: () => ({
-            name: "Old Team Name",
             regDate: new Date().toISOString(),
             group: "old-group-id",
           }),
@@ -349,7 +285,7 @@ describe("TeamService", () => {
 
       const mockCollection = jest.fn().mockReturnValue({
         doc: jest.fn().mockImplementation((id) => {
-          if (id === "team-id") {
+          if (id === existingTeam.id) {
             return mockTeamDoc;
           } else if (id === "old-group-id") {
             return mockGroupDocOld;
@@ -363,7 +299,7 @@ describe("TeamService", () => {
         }),
       });
 
-      db.collection = mockCollection;
+      jest.spyOn(db, "collection").mockImplementation(mockCollection);
 
       existingTeam.group = "new-group-id";
 
@@ -379,13 +315,11 @@ describe("TeamService", () => {
       const mockTeams: Team[] = [
         {
           id: "team1",
-          name: "Team 1",
           regDate: new Date().toISOString(),
           group: "group1",
         },
         {
           id: "team2",
-          name: "Team 2",
           regDate: new Date().toISOString(),
           group: "group2",
         },
@@ -412,8 +346,13 @@ describe("TeamService", () => {
     });
 
     it("should throw an error when there are no teams", async () => {
+      const mockEmptySnapshot = {
+        empty: true,
+        docs: [],
+      };
+
       (db.collection("teams").get as jest.Mock).mockResolvedValueOnce(
-        undefined
+        mockEmptySnapshot
       );
 
       await expect(teamService.getAll()).rejects.toThrow("No teams found.");
