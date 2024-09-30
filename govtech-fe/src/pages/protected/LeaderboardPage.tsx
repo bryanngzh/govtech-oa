@@ -16,7 +16,7 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { TeamStat } from "../entities/TeamStat";
+import { TeamStat } from "../../entities/TeamStat";
 
 const LeaderboardPage = () => {
   const [data, setData] = useState<{ [group: string]: TeamStat[] }>({});

@@ -20,7 +20,7 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { Match } from "../entities/Match";
+import { Match } from "../../entities/Match";
 
 const MatchesPage = () => {
   const [input, setInput] = useState<string>("");
