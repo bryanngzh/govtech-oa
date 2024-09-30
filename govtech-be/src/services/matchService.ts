@@ -1,9 +1,109 @@
-import { QueryDocumentSnapshot } from "firebase-admin/firestore";
+import {
+  DocumentData,
+  QueryDocumentSnapshot,
+  QuerySnapshot,
+} from "firebase-admin/firestore";
 import { Team } from "src/models/teamModel";
 import { db } from "../configs/firebase";
 import { Match, TeamStat } from "../models/matchModel";
 
 export class MatchService {
+  /** Helper Functions */
+  private async validateTeams(
+    teamAId: string,
+    teamBId: string
+  ): Promise<{ teamA: Team; teamB: Team }> {
+    const teamARef = db.collection("teams").doc(teamAId);
+    const teamBRef = db.collection("teams").doc(teamBId);
+
+    const [teamADoc, teamBDoc] = await Promise.all([
+      teamARef.get(),
+      teamBRef.get(),
+    ]);
+
+    if (!teamADoc.exists || !teamBDoc.exists) {
+      if (!teamADoc.exists) {
+        throw new Error(`Team with ID ${teamAId} does not exist.`);
+      }
+      if (!teamBDoc.exists) {
+        throw new Error(`Team with ID ${teamBId} does not exist.`);
+      }
+    }
+
+    const teamA: Team = teamADoc.data() as Team;
+    const teamB: Team = teamBDoc.data() as Team;
+
+    if (teamA.group !== teamB.group) {
+      throw new Error(
+        `Teams ${teamAId} and ${teamBId} are not in the same group.`
+      );
+    }
+
+    return { teamA, teamB };
+  }
+
+  private async getAllTeamsAndMatches(): Promise<[Team[], Match[]]> {
+    const [teamsSnapshot, matchesSnapshot] = await Promise.all([
+      db.collection("teams").get(),
+      db.collection("matches").get(),
+    ]);
+
+    const teams: Team[] = teamsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Omit<Team, "id">),
+    }));
+
+    const matches: Match[] = matchesSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Omit<Match, "id">),
+    }));
+
+    return [teams, matches];
+  }
+
+  private calculateTeamStats(team: Team, matches: Match[]): TeamStat {
+    let totalMatches = 0;
+    let wins = 0;
+    let losses = 0;
+    let draws = 0;
+    let points = 0;
+    let altPoints = 0;
+
+    matches.forEach((match) => {
+      if (match.teamA === team.id || match.teamB === team.id) {
+        totalMatches++;
+        const isTeamA = match.teamA === team.id;
+        const teamScore = isTeamA ? match.scoreA : match.scoreB;
+        const opponentScore = isTeamA ? match.scoreB : match.scoreA;
+
+        if (teamScore === opponentScore) {
+          draws++;
+          points += 1;
+          altPoints += 3;
+        } else if (teamScore > opponentScore) {
+          wins++;
+          points += 3;
+          altPoints += 5;
+        } else {
+          losses++;
+          altPoints += 1;
+        }
+      }
+    });
+
+    return {
+      id: team.id,
+      group: team.group,
+      regDate: team.regDate,
+      totalMatches,
+      wins,
+      losses,
+      draws,
+      points,
+      altPoints,
+    };
+  }
+
   /**
    * Fetches match details by ID from the "matches" collection.
    *
@@ -54,8 +154,8 @@ export class MatchService {
       throw new Error("No matches found.");
     }
 
-    const matches: Match[] = matchesSnapshot.docs.map(
-      (doc: QueryDocumentSnapshot) => {
+    const matches: Match[] = await Promise.all(
+      matchesSnapshot.docs.map(async (doc: QueryDocumentSnapshot) => {
         const matchData = doc.data();
         return {
           id: doc.id,
@@ -64,65 +164,131 @@ export class MatchService {
           scoreA: matchData.scoreA,
           scoreB: matchData.scoreB,
         };
-      }
+      })
     );
 
     return matches;
   }
 
   /**
-   * Adds a new match or updates an existing match in the "matches" collection.
+   * Fetches match details by team ID from the "matches" collection.
    *
-   * If a match ID is provided, it updates the existing match.
-   * If no ID is provided, it creates a new match.
+   * @param {string} teamId - The unique team ID.
+   * @returns {Promise<Match[]>} Resolves with an array of match details:
+   * - `id` {string}
+   * - `teamA` {string}
+   * - `teamB` {string}
+   * - `scoreA` {number}
+   * - `scoreB` {number}
    *
-   * @param {Match} match - The match object containing details to be added or updated:
-   * - `id` {string} (optional) - The unique match ID. Required for updates.
+   * @throws {Error} If no matches are found for the specified team ID.
+   */
+  public async getMatchesByTeamId(teamId: string): Promise<Match[]> {
+    const [matchesA, matchesB] = await Promise.all([
+      db.collection("matches").where("teamA", "==", teamId).get(),
+      db.collection("matches").where("teamB", "==", teamId).get(),
+    ]);
+
+    const processMatches = async (
+      matchSnapshots: QuerySnapshot<DocumentData>
+    ) => {
+      return Promise.all(
+        matchSnapshots.docs.map(async (matchSnapshot) => {
+          const matchData = matchSnapshot.data();
+          return {
+            id: matchSnapshot.id,
+            teamA: matchData.teamA,
+            teamB: matchData.teamB,
+            scoreA: matchData.scoreA,
+            scoreB: matchData.scoreB,
+          };
+        })
+      );
+    };
+
+    const [processedMatchesA, processedMatchesB] = await Promise.all([
+      processMatches(matchesA),
+      processMatches(matchesB),
+    ]);
+
+    const matches = [...processedMatchesA, ...processedMatchesB];
+
+    if (matches.length === 0) {
+      throw new Error(`No matches found for team with ID ${teamId}.`);
+    }
+
+    return matches;
+  }
+
+  /**
+   * Creates a new match in the "matches" collection.
+   *
+   * @param {Match} match - The match object containing details to be added:
    * - `teamA` {string} - Name of team A (must be a valid team ID).
    * - `teamB` {string} - Name of team B (must be a valid team ID).
    * - `scoreA` {number} - Score of team A (must be a number).
    * - `scoreB` {number} - Score of team B (must be a number).
    *
-   * @returns {Promise<Match>} Resolves with the added or updated match details, including the ID.
+   * @returns {Promise<Match>} Resolves with the created match details, including the ID.
    *
-   * @throws {Error} If an ID is provided but the match does not exist.
    * @throws {Error} If teamA or teamB are not valid team IDs.
    * @throws {Error} If scoreA or scoreB are not numbers.
+   * @throws {Error} If teamA and teamB are not in the same group.
    */
-  public async createOrUpdate(match: Match): Promise<Match> {
-    // Validate scores type
+  public async create(match: Match): Promise<Match> {
     if (typeof match.scoreA !== "number" || typeof match.scoreB !== "number") {
       throw new Error("Scores must be numbers.");
     }
 
-    // Validate team IDs
-    const teamARef = db.collection("teams").doc(match.teamA);
-    const teamBRef = db.collection("teams").doc(match.teamB);
+    await this.validateTeams(match.teamA, match.teamB);
 
-    const [teamADoc, teamBDoc] = await Promise.all([
-      teamARef.get(),
-      teamBRef.get(),
-    ]);
+    const matchRef = db.collection("matches").doc();
 
-    if (!teamADoc.exists) {
-      throw new Error(`Team A with ID ${match.teamA} does not exist.`);
+    await matchRef.set({
+      teamA: match.teamA,
+      teamB: match.teamB,
+      scoreA: match.scoreA,
+      scoreB: match.scoreB,
+    });
+
+    return { ...match, id: matchRef.id };
+  }
+
+  /**
+   * Updates an existing match in the "matches" collection.
+   *
+   * @param {string} id - The id of the match.
+   * @param {Match} match - The match object containing details to be updated:
+   * - `id` {string} - The unique match ID. Required for updates.
+   * - `teamA` {string} - Name of team A (must be a valid team ID).
+   * - `teamB` {string} - Name of team B (must be a valid team ID).
+   * - `scoreA` {number} - Score of team A (must be a number).
+   * - `scoreB` {number} - Score of team B (must be a number).
+   *
+   * @returns {Promise<Match>} Resolves with the updated match details.
+   *
+   * @throws {Error} If the match ID is invalid or the match does not exist.
+   * @throws {Error} If teamA or teamB are not valid team IDs.
+   * @throws {Error} If scoreA or scoreB are not numbers.
+   * @throws {Error} If teamA and teamB are not in the same group.
+   */
+  public async update(id: string, match: Match): Promise<Match> {
+    if (!id) {
+      throw new Error("Match ID is required for updates.");
     }
 
-    if (!teamBDoc.exists) {
-      throw new Error(`Team B with ID ${match.teamB} does not exist.`);
+    if (typeof match.scoreA !== "number" || typeof match.scoreB !== "number") {
+      throw new Error("Scores must be numbers.");
     }
 
-    const matchRef = match.id
-      ? db.collection("matches").doc(match.id)
-      : db.collection("matches").doc();
+    await this.validateTeams(match.teamA, match.teamB);
 
-    if (match.id) {
-      const matchSnapshot = await matchRef.get();
-      if (!matchSnapshot.exists) {
-        throw new Error(
-          `Match with ID ${match.id} does not exist. Please provide a valid ID to update.`
-        );
-      }
+    const matchRef = db.collection("matches").doc(id);
+    const matchSnapshot = await matchRef.get();
+    if (!matchSnapshot.exists) {
+      throw new Error(
+        `Match with ID ${id} does not exist. Please provide a valid ID to update.`
+      );
     }
 
     await matchRef.set({
@@ -132,7 +298,7 @@ export class MatchService {
       scoreB: match.scoreB,
     });
 
-    return { ...match, id: matchRef.id ?? match.id };
+    return { ...match, id: matchRef.id || id };
   }
 
   /**
@@ -175,75 +341,24 @@ export class MatchService {
    * - `regDate` {Date} - The registration date of the team.
    */
   public async getTeamStats(teamId: string): Promise<TeamStat | null> {
-    const teamDoc = await db.collection("teams").doc(teamId).get();
+    const [teamDoc, matchSnapshotA, matchSnapshotB] = await Promise.all([
+      db.collection("teams").doc(teamId).get(),
+      db.collection("matches").where("teamA", "==", teamId).get(),
+      db.collection("matches").where("teamB", "==", teamId).get(),
+    ]);
 
-    if (!teamDoc.exists) {
-      throw new Error(`Team with ID ${teamId} does not exist.`);
+    if (!teamDoc.exists || !teamDoc.data()) {
+      throw new Error(`Team with ID ${teamId} does not exist or has no data.`);
     }
 
-    const teamData = teamDoc.data();
-    const group = teamData?.group;
-    const regDate = teamData?.regDate;
+    const { id, group, regDate } = teamDoc.data() as Team;
+    const team: Team = { id, group, regDate };
 
-    const matchSnapshotA = await db
-      .collection("matches")
-      .where("teamA", "==", teamId)
-      .get();
-    const matchSnapshotB = await db
-      .collection("matches")
-      .where("teamB", "==", teamId)
-      .get();
+    const matches = [...matchSnapshotA.docs, ...matchSnapshotB.docs].map(
+      (doc) => doc.data() as Match
+    );
 
-    let totalMatches = 0;
-    let wins = 0;
-    let losses = 0;
-    let draws = 0;
-    let points = 0;
-    let altPoints = 0;
-
-    const processMatch = (matchData: any, isTeamA: boolean) => {
-      totalMatches++;
-      const { scoreA, scoreB } = matchData;
-
-      if (scoreA === scoreB) {
-        draws++;
-        points += 1;
-        altPoints += 3;
-      } else if (isTeamA && scoreA > scoreB) {
-        wins++;
-        points += 3;
-        altPoints += 5;
-      } else if (!isTeamA && scoreB > scoreA) {
-        wins++;
-        points += 3;
-        altPoints += 5;
-      } else {
-        losses++;
-        altPoints += 1;
-      }
-    };
-
-    matchSnapshotA.docs.forEach((doc) => {
-      const matchData = doc.data();
-      processMatch(matchData, true);
-    });
-
-    matchSnapshotB.docs.forEach((doc) => {
-      const matchData = doc.data();
-      processMatch(matchData, false);
-    });
-
-    return {
-      id: teamId,
-      group,
-      regDate,
-      totalMatches,
-      wins,
-      losses,
-      draws,
-      points,
-      altPoints,
-    };
+    return this.calculateTeamStats(team, matches);
   }
 
   /**
@@ -264,40 +379,19 @@ export class MatchService {
    * - `altPoints` {number} - The alternate points based on match results.
    */
   public async getAllTeamStats(): Promise<{ [group: string]: TeamStat[] }> {
-    const teamsSnapshot = await db.collection("teams").get();
+    const [teams, matches] = await this.getAllTeamsAndMatches();
 
-    const teams: Team[] = [];
-
-    teamsSnapshot.forEach((doc: QueryDocumentSnapshot) => {
-      const teamData = doc.data();
-      teams.push({
-        id: doc.id,
-        regDate: teamData.regDate,
-        group: teamData.group,
-      });
-    });
-
-    const teamStatsPromises = teams.map((team) =>
-      this.getTeamStats(team.id as string)
+    const teamStats = teams.map((team) =>
+      this.calculateTeamStats(team, matches)
     );
 
-    const teamStats: TeamStat[] = (await Promise.all(
-      teamStatsPromises
-    )) as TeamStat[];
-
-    // Group team statistics by their respective groups
-    const groupedStats: { [group: string]: TeamStat[] } = {};
-
-    teamStats.forEach((stat) => {
-      if (stat) {
-        const group = stat.group;
-        if (!groupedStats[group]) {
-          groupedStats[group] = [];
-        }
-        groupedStats[group].push(stat);
+    return teamStats.reduce((groupedStats, stat) => {
+      const { group } = stat;
+      if (!groupedStats[group]) {
+        groupedStats[group] = [];
       }
-    });
-
-    return groupedStats;
+      groupedStats[group].push(stat);
+      return groupedStats;
+    }, {} as { [group: string]: TeamStat[] });
   }
 }
