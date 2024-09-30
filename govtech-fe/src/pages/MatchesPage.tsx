@@ -20,13 +20,7 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
-
-interface Match {
-  teamA: string;
-  teamB: string;
-  scoreA: number;
-  scoreB: number;
-}
+import { Match } from "../entities/Match";
 
 const MatchesPage = () => {
   const [input, setInput] = useState<string>("");
@@ -77,11 +71,7 @@ const MatchesPage = () => {
     };
 
     try {
-      await axios.post("http://localhost:3000/matches", newMatch, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      await axios.post("http://localhost:3000/matches", newMatch);
       setMatchHistory((prevHistory) => [...prevHistory, newMatch]);
       setInput("");
     } catch (error) {

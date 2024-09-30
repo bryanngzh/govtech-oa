@@ -16,12 +16,10 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { Team } from "../entities/Team";
 import { TeamStat } from "../entities/TeamStat";
 
 const LeaderboardPage = () => {
-  const [data, setData] = useState<TeamStat[]>([]);
-  const [teamDetails, setTeamDetails] = useState<Team[]>([]);
+  const [data, setData] = useState<{ [group: string]: TeamStat[] }>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,17 +29,8 @@ const LeaderboardPage = () => {
         const response = await axios.get(
           "http://localhost:3000/matches/team-stats"
         );
-        const jsonData: TeamStat[] = response.data;
+        const jsonData: { [group: string]: TeamStat[] } = response.data;
         setData(jsonData);
-
-        const teamDetailsPromises = jsonData.map((teamStat) =>
-          axios
-            .get(`http://localhost:3000/teams?id=${teamStat.id}`)
-            .then((res) => res.data)
-        );
-        const teamsData = await Promise.all(teamDetailsPromises);
-
-        setTeamDetails(teamsData);
       } catch (error) {
         setError((error as Error).message);
       } finally {
@@ -52,18 +41,17 @@ const LeaderboardPage = () => {
     fetchData();
   }, []);
 
-  const groupByGroup = (teams: Team[]): Record<string, Team[]> => {
-    return teams.reduce((acc, team) => {
-      const groupId = team.group;
-      if (!acc[groupId]) {
-        acc[groupId] = [];
+  const sortTeams = (teams: TeamStat[]) => {
+    return teams.sort((a, b) => {
+      if (b.points !== a.points) {
+        return b.points - a.points;
       }
-      acc[groupId].push(team);
-      return acc;
-    }, {} as Record<string, Team[]>);
+      if (b.altPoints !== a.altPoints) {
+        return b.altPoints - a.altPoints;
+      }
+      return new Date(a.regDate).getTime() - new Date(b.regDate).getTime();
+    });
   };
-
-  const groupedData = groupByGroup(teamDetails);
 
   return (
     <Box p={5}>
@@ -80,36 +68,49 @@ const LeaderboardPage = () => {
         </Alert>
       )}
       <VStack spacing={6} align="stretch">
-        {Object.entries(groupedData).map(([groupId, teams]) => (
-          <Box key={groupId} borderWidth={1} borderRadius="lg" p={4}>
-            <Table variant="simple">
-              <TableCaption>Group ID: {groupId}</TableCaption>
-              <Thead>
-                <Tr>
-                  <Th>Team Name</Th>
-                  <Th>Total Matches</Th>
-                  <Th>Wins</Th>
-                  <Th>Losses</Th>
-                  <Th>Draws</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {teams.map((team) => {
-                  const teamStat = data.find((stat) => stat.id === team.id);
-                  return (
-                    <Tr key={team.id}>
+        {Object.entries(data).map(([groupId, teams]) => {
+          const sortedTeams = sortTeams(teams);
+
+          return (
+            <Box key={groupId} borderWidth={1} borderRadius="lg" p={4}>
+              <Heading size="md" mb={6}>
+                Group {groupId}
+              </Heading>
+              <Table variant="simple">
+                <TableCaption>Group ID: {groupId}</TableCaption>
+                <Thead>
+                  <Tr bg={"gray.200"}>
+                    <Th>Team Name</Th>
+                    <Th>Total Matches</Th>
+                    <Th>Wins</Th>
+                    <Th>Losses</Th>
+                    <Th>Draws</Th>
+                    <Th>Points</Th>
+                    <Th>Alternative Points</Th>
+                    <Th>Registration Date</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {sortedTeams.map((team, index) => (
+                    <Tr
+                      key={team.id}
+                      bg={index < 3 ? "green.100" : "transparent"}
+                    >
                       <Td>{team.id}</Td>
-                      <Td>{teamStat?.totalMatches}</Td>
-                      <Td>{teamStat?.wins}</Td>
-                      <Td>{teamStat?.losses}</Td>
-                      <Td>{teamStat?.draws}</Td>
+                      <Td>{team.totalMatches}</Td>
+                      <Td>{team.wins}</Td>
+                      <Td>{team.losses}</Td>
+                      <Td>{team.draws}</Td>
+                      <Td>{team.points}</Td>
+                      <Td>{team.altPoints}</Td>
+                      <Td>{new Date(team.regDate).toLocaleString()}</Td>
                     </Tr>
-                  );
-                })}
-              </Tbody>
-            </Table>
-          </Box>
-        ))}
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          );
+        })}
       </VStack>
     </Box>
   );
