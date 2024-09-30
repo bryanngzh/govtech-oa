@@ -103,7 +103,7 @@ const LeaderboardPage = () => {
                       <Td>{team.draws}</Td>
                       <Td>{team.points}</Td>
                       <Td>{team.altPoints}</Td>
-                      <Td>{new Date(team.regDate).toLocaleString()}</Td>
+                      <Td>{new Date(team.regDate).toLocaleDateString()}</Td>
                     </Tr>
                   ))}
                 </Tbody>
