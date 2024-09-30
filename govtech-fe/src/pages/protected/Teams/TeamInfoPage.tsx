@@ -53,7 +53,7 @@ const TeamInfoPage = () => {
         );
         setMatchHistory(response.data);
       } catch (error) {
-        setError((error as Error).message);
+        console.log((error as Error).message);
       }
     };
 
@@ -158,37 +158,38 @@ const TeamInfoPage = () => {
           </Alert>
         )}
 
-        <Box p={5}>
-          <Heading size="md" mb={4}>
-            Match History
-          </Heading>
-          <Table variant="simple">
-            <TableCaption>Previous Matches</TableCaption>
-            <Thead>
-              <Tr>
-                <Th>Team A</Th>
-                <Th>Team B</Th>
-                <Th>Score A</Th>
-                <Th>Score B</Th>
-                <Th>Actions</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {matchHistory.map((match, index) => (
-                <Tr key={index}>
-                  <Td>{match.teamA}</Td>
-                  <Td>{match.teamB}</Td>
-                  <Td>{match.scoreA}</Td>
-                  <Td>{match.scoreB}</Td>
-                  <Td>
-                    <Button onClick={() => openEditModal(match)}>Edit</Button>
-                  </Td>
+        {matchHistory && (
+          <Box p={5}>
+            <Heading size="md" mb={4}>
+              Match History
+            </Heading>
+            <Table variant="simple">
+              <TableCaption>Previous Matches</TableCaption>
+              <Thead>
+                <Tr>
+                  <Th>Team A</Th>
+                  <Th>Team B</Th>
+                  <Th>Score A</Th>
+                  <Th>Score B</Th>
+                  <Th>Actions</Th>
                 </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-
+              </Thead>
+              <Tbody>
+                {matchHistory.map((match, index) => (
+                  <Tr key={index}>
+                    <Td>{match.teamA}</Td>
+                    <Td>{match.teamB}</Td>
+                    <Td>{match.scoreA}</Td>
+                    <Td>{match.scoreB}</Td>
+                    <Td>
+                      <Button onClick={() => openEditModal(match)}>Edit</Button>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        )}
         <EditMatchesModal
           isOpen={isOpen}
           onClose={onClose}

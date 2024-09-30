@@ -158,6 +158,20 @@ const TeamsPage = () => {
     }
   };
 
+  const handleDelete = async (teamId: string) => {
+    setLoading(true);
+    try {
+      await axios.delete(`http://localhost:3000/teams?id=${teamId}`);
+      setTeamHistory((prevHistory) =>
+        prevHistory.filter((team) => team.id !== teamId)
+      );
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const goToTeamInfoPage = (teamId: string) => {
     navigate(`/team-info/${teamId}`);
   };
@@ -218,6 +232,13 @@ const TeamsPage = () => {
                     <Button onClick={() => openEditModal(team)}>Edit</Button>
                     <Button ml={2} onClick={() => goToTeamInfoPage(team.id)}>
                       Info
+                    </Button>
+                    <Button
+                      ml={2}
+                      colorScheme="red"
+                      onClick={() => handleDelete(team.id)}
+                    >
+                      Delete
                     </Button>
                   </Td>
                 </Tr>
