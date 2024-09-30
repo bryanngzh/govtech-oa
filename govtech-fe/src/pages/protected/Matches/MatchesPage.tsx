@@ -111,7 +111,6 @@ const MatchesPage = () => {
     }
 
     const updatedMatch: Match = {
-      id: selectedMatch.id,
       teamA,
       teamB,
       scoreA,
@@ -119,7 +118,10 @@ const MatchesPage = () => {
     };
 
     try {
-      await axios.post(`http://localhost:3000/matches`, updatedMatch);
+      await axios.put(
+        `http://localhost:3000/matches?id=${selectedMatch.id as string}`,
+        updatedMatch
+      );
       setMatchHistory((prevHistory) =>
         prevHistory.map((match) =>
           match.id === selectedMatch.id ? updatedMatch : match
