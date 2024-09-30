@@ -20,6 +20,7 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Team } from "../../../entities/Team";
 import EditTeamsModal from "./EditTeamsModal";
 
@@ -31,6 +32,7 @@ const TeamsPage = () => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTeamHistory = async () => {
@@ -156,6 +158,10 @@ const TeamsPage = () => {
     }
   };
 
+  const goToTeamInfoPage = (teamId: string) => {
+    navigate(`/team-info/${teamId}`);
+  };
+
   return (
     <Box p={5}>
       <Heading mb={6}>Teams</Heading>
@@ -210,6 +216,9 @@ const TeamsPage = () => {
                   <Td>{team.group}</Td>
                   <Td>
                     <Button onClick={() => openEditModal(team)}>Edit</Button>
+                    <Button ml={2} onClick={() => goToTeamInfoPage(team.id)}>
+                      Info
+                    </Button>
                   </Td>
                 </Tr>
               ))}
