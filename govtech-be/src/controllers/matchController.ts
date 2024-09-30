@@ -24,17 +24,6 @@ export class MatchController extends Controller {
     }
   }
 
-  @Get("team-stats")
-  public async getTeamStats(
-    @Query("teamId") teamId?: string
-  ): Promise<TeamStat | TeamStat[] | null> {
-    if (teamId) {
-      return this.matchService.getTeamStats(teamId);
-    } else {
-      return this.matchService.getAllTeamStats();
-    }
-  }
-
   @SuccessResponse("201", "Created")
   @Post()
   public async createOrUpdateMatch(@Body() requestBody: Match): Promise<Match> {
@@ -47,5 +36,16 @@ export class MatchController extends Controller {
   public async deleteMatch(@Query("id") id: string): Promise<void> {
     await this.matchService.delete(id);
     this.setStatus(204);
+  }
+
+  @Get("team-stats")
+  public async getTeamStats(
+    @Query("teamId") teamId?: string
+  ): Promise<TeamStat | { [group: string]: TeamStat[] } | null> {
+    if (teamId) {
+      return this.matchService.getTeamStats(teamId);
+    } else {
+      return this.matchService.getAllTeamStats();
+    }
   }
 }
