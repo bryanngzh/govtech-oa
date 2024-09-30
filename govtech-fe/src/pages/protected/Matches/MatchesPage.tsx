@@ -17,16 +17,21 @@ import {
   Thead,
   Tr,
   VStack,
+  useDisclosure,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { Match } from "../../entities/Match";
+import { Match } from "../../../entities/Match";
+import EditMatchesModal from "./EditMatchesModal";
 
 const MatchesPage = () => {
   const [input, setInput] = useState<string>("");
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   useEffect(() => {
     const fetchMatchHistory = async () => {
@@ -79,6 +84,54 @@ const MatchesPage = () => {
     }
   };
 
+  const openEditModal = (match: Match) => {
+    setSelectedMatch(match);
+    onOpen();
+  };
+
+  const handleUpdate = async (updatedInput: string) => {
+    if (!selectedMatch) return;
+
+    const inputParts = updatedInput.split(" ");
+    if (inputParts.length !== 4) {
+      setError(
+        "Please enter data in the format: <teamA> <teamB> <scoreA> <scoreB>"
+      );
+      return;
+    }
+
+    const [teamA, teamB, scoreAString, scoreBString] = inputParts;
+
+    const scoreA = Number(scoreAString);
+    const scoreB = Number(scoreBString);
+
+    if (isNaN(scoreA) || isNaN(scoreB)) {
+      setError("Please enter valid numbers for the scores.");
+      return;
+    }
+
+    const updatedMatch: Match = {
+      id: selectedMatch.id,
+      teamA,
+      teamB,
+      scoreA,
+      scoreB,
+    };
+
+    try {
+      await axios.post(`http://localhost:3000/matches`, updatedMatch);
+      setMatchHistory((prevHistory) =>
+        prevHistory.map((match) =>
+          match.id === selectedMatch.id ? updatedMatch : match
+        )
+      );
+      onClose();
+      setSelectedMatch(null);
+    } catch (error) {
+      setError((error as Error).message);
+    }
+  };
+
   return (
     <Box p={5}>
       <Heading mb={6}>Matches</Heading>
@@ -124,6 +177,7 @@ const MatchesPage = () => {
                 <Th>Team B</Th>
                 <Th>Score A</Th>
                 <Th>Score B</Th>
+                <Th>Actions</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -133,12 +187,22 @@ const MatchesPage = () => {
                   <Td>{match.teamB}</Td>
                   <Td>{match.scoreA}</Td>
                   <Td>{match.scoreB}</Td>
+                  <Td>
+                    <Button onClick={() => openEditModal(match)}>Edit</Button>
+                  </Td>
                 </Tr>
               ))}
             </Tbody>
           </Table>
         </Box>
       )}
+
+      <EditMatchesModal
+        isOpen={isOpen}
+        onClose={onClose}
+        selectedMatch={selectedMatch}
+        handleUpdate={handleUpdate}
+      />
     </Box>
   );
 };
