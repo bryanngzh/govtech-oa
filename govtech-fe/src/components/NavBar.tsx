@@ -18,8 +18,11 @@ const NavBar = () => {
         </Heading>
         <Flex>
           <Link as={RouterLink} to="/" color="white" mx={2}>
-            Dashboard
+            Leaderboard
           </Link>
+          {/* <Link as={RouterLink} to="/matches" color="white" mx={2}>
+            Matches
+          </Link> */}
           <Link onClick={handleLogout} mx={2}>
             Log Out
           </Link>
