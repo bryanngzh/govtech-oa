@@ -128,6 +128,20 @@ const TeamInfoPage = () => {
     );
   }
 
+  const handleDelete = async (matchId: string) => {
+    setLoading(true);
+    try {
+      await axios.delete(`http://localhost:3000/matches?id=${matchId}`);
+      setMatchHistory((prevHistory) =>
+        prevHistory.filter((match) => match.id !== matchId)
+      );
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Box p={5}>
@@ -183,6 +197,13 @@ const TeamInfoPage = () => {
                     <Td>{match.scoreB}</Td>
                     <Td>
                       <Button onClick={() => openEditModal(match)}>Edit</Button>
+                      <Button
+                        ml={2}
+                        colorScheme="red"
+                        onClick={() => handleDelete(match.id as string)}
+                      >
+                        Delete
+                      </Button>
                     </Td>
                   </Tr>
                 ))}
