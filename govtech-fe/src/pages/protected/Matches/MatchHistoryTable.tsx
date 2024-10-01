@@ -13,7 +13,9 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { Match } from "../../../entities/Match";
+import { RootState } from "../../../stores/store";
 import EditMatchModal from "./EditMatchModal";
 
 interface MatchHistoryTableProps {
@@ -29,10 +31,15 @@ const MatchHistoryTable = ({
 }: MatchHistoryTableProps) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const accessToken = useSelector((state: RootState) => state.auth.token);
 
   const handleDelete = async (matchId: string) => {
     try {
-      await axios.delete(`http://localhost:3000/matches?id=${matchId}`);
+      await axios.delete(`http://localhost:3000/matches?id=${matchId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       setMatchHistory((prevHistory) =>
         prevHistory.filter((match) => match.id !== matchId)
       );
@@ -56,7 +63,12 @@ const MatchHistoryTable = ({
     try {
       const response = await axios.put(
         `http://localhost:3000/matches?id=${selectedMatch.id}`,
-        updatedMatch
+        updatedMatch,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
       );
       const updated = response.data;
       setMatchHistory((prevHistory) =>

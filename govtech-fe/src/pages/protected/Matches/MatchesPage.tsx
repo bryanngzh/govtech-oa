@@ -13,7 +13,9 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { Match } from "../../../entities/Match";
+import { RootState } from "../../../stores/store";
 import MatchHistoryTable from "./MatchHistoryTable";
 
 const ERROR_MESSAGES = {
@@ -28,10 +30,16 @@ const MatchesPage = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const accessToken = useSelector((state: RootState) => state.auth.token);
+
   const fetchMatchHistory = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:3000/matches");
+      const response = await axios.get("http://localhost:3000/matches", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       setMatchHistory(response.data);
     } catch (error) {
       setError((error as Error).message);
@@ -64,7 +72,12 @@ const MatchesPage = () => {
     try {
       const response = await axios.post(
         "http://localhost:3000/matches",
-        newMatch
+        newMatch,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
       );
       newMatch = response.data;
       setMatchHistory((prevHistory) => [...prevHistory, newMatch]);

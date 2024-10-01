@@ -15,6 +15,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Team } from "../../../entities/Team";
 import EditTeamsModal from "./EditTeamsModal";
+import { useSelector } from "react-redux";
+import { RootState } from "../../../stores/store";
 
 interface TeamsTableProps {
   teamHistory: Team[];
@@ -30,7 +32,8 @@ const TeamsTable = ({
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const navigate = useNavigate();
-
+  const accessToken = useSelector((state: RootState) => state.auth.token);
+  
   const openEditModal = (team: Team) => {
     setSelectedTeam(team);
     onOpen();
@@ -42,7 +45,11 @@ const TeamsTable = ({
 
   const handleDelete = async (teamId: string) => {
     try {
-      await axios.delete(`http://localhost:3000/teams?id=${teamId}`);
+      await axios.delete(`http://localhost:3000/teams?id=${teamId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       setTeamHistory((prevHistory) =>
         prevHistory.filter((team) => team.id !== teamId)
       );
@@ -89,7 +96,12 @@ const TeamsTable = ({
     try {
       const response = await axios.put(
         `http://localhost:3000/teams?id=${teamName}`,
-        updatedTeam
+        updatedTeam,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
       );
       updatedTeam = response.data;
       setTeamHistory((prevHistory) =>
