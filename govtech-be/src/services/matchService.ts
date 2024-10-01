@@ -351,8 +351,8 @@ export class MatchService {
       throw new Error(`Team with ID ${teamId} does not exist or has no data.`);
     }
 
-    const { id, group, regDate } = teamDoc.data() as Team;
-    const team: Team = { id, group, regDate };
+    const { group, regDate } = teamDoc.data() as Team;
+    const team: Team = { id: teamId, group, regDate };
 
     const matches = [...matchSnapshotA.docs, ...matchSnapshotB.docs].map(
       (doc) => doc.data() as Match
