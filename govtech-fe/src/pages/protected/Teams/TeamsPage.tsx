@@ -66,14 +66,17 @@ const TeamsPage = () => {
       return;
     }
 
-    const newTeam: Team = {
-      id: teamName,
+    let newTeam: Team = {
       regDate: isoDateString,
       group: groupNumberString,
     };
 
     try {
-      await axios.post("http://localhost:3000/teams", newTeam);
+      const response = await axios.post(
+        `http://localhost:3000/teams?id=${teamName}`,
+        newTeam
+      );
+      newTeam = response.data;
       setTeamHistory((prevHistory) => {
         const teamIndex = prevHistory.findIndex((team) => team.id === teamName);
 

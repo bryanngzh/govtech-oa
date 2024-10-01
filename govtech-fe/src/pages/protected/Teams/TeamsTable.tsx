@@ -81,14 +81,17 @@ const TeamsTable = ({
     const date = new Date(currentYear, month - 1, day);
     const isoDateString = date.toISOString();
 
-    const updatedTeam: Team = {
-      id: teamName,
+    let updatedTeam: Team = {
       regDate: isoDateString,
       group: groupNumberString,
     };
 
     try {
-      await axios.post("http://localhost:3000/teams", updatedTeam);
+      const response = await axios.put(
+        `http://localhost:3000/teams?id=${teamName}`,
+        updatedTeam
+      );
+      updatedTeam = response.data;
       setTeamHistory((prevHistory) =>
         prevHistory.map((team) =>
           team.id === selectedTeam.id ? updatedTeam : team
@@ -123,13 +126,16 @@ const TeamsTable = ({
               <Td>{team.group}</Td>
               <Td>
                 <Button onClick={() => openEditModal(team)}>Edit</Button>
-                <Button ml={2} onClick={() => goToTeamInfoPage(team.id)}>
+                <Button
+                  ml={2}
+                  onClick={() => goToTeamInfoPage(team.id as string)}
+                >
                   Info
                 </Button>
                 <Button
                   ml={2}
                   colorScheme="red"
-                  onClick={() => handleDelete(team.id)}
+                  onClick={() => handleDelete(team.id as string)}
                 >
                   Delete
                 </Button>
