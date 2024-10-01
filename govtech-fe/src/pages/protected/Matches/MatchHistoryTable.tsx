@@ -35,11 +35,14 @@ const MatchHistoryTable = ({
 
   const handleDelete = async (matchId: string) => {
     try {
-      await axios.delete(`http://localhost:3000/matches?id=${matchId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      await axios.delete(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/matches?id=${matchId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
       setMatchHistory((prevHistory) =>
         prevHistory.filter((match) => match.id !== matchId)
       );
@@ -62,7 +65,9 @@ const MatchHistoryTable = ({
 
     try {
       const response = await axios.put(
-        `http://localhost:3000/matches?id=${selectedMatch.id}`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/matches?id=${
+          selectedMatch.id
+        }`,
         updatedMatch,
         {
           headers: {

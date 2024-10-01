@@ -30,11 +30,14 @@ const TeamsPage = () => {
     const fetchTeamHistory = async () => {
       setLoading(true);
       try {
-        const response = await axios.get("http://localhost:3000/teams", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        const response = await axios.get(
+          `${import.meta.env.VITE_APP_BACKEND_URL}/teams`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
         setTeamHistory(response.data);
       } catch (error) {
         setError((error as Error).message);
@@ -81,7 +84,7 @@ const TeamsPage = () => {
 
     try {
       const response = await axios.post(
-        `http://localhost:3000/teams?id=${teamName}`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/teams?id=${teamName}`,
         newTeam,
         {
           headers: {

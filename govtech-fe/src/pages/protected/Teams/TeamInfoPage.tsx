@@ -31,7 +31,7 @@ const TeamInfoPage = () => {
     const fetchTeamInfo = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/teams?id=${teamId}`,
+          `${import.meta.env.VITE_APP_BACKEND_URL}/teams?id=${teamId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -49,7 +49,9 @@ const TeamInfoPage = () => {
     const fetchMatchHistory = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/matches/by-team?teamId=${teamId}`,
+          `${
+            import.meta.env.VITE_APP_BACKEND_URL
+          }/matches/by-team?teamId=${teamId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -65,7 +67,9 @@ const TeamInfoPage = () => {
     const fetchTeamStats = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/matches/team-stats?teamId=${teamId}`,
+          `${
+            import.meta.env.VITE_APP_BACKEND_URL
+          }/matches/team-stats?teamId=${teamId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,

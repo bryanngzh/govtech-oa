@@ -12,11 +12,11 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Team } from "../../../entities/Team";
-import EditTeamsModal from "./EditTeamsModal";
-import { useSelector } from "react-redux";
 import { RootState } from "../../../stores/store";
+import EditTeamsModal from "./EditTeamsModal";
 
 interface TeamsTableProps {
   teamHistory: Team[];
@@ -33,7 +33,7 @@ const TeamsTable = ({
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const navigate = useNavigate();
   const accessToken = useSelector((state: RootState) => state.auth.token);
-  
+
   const openEditModal = (team: Team) => {
     setSelectedTeam(team);
     onOpen();
@@ -45,11 +45,14 @@ const TeamsTable = ({
 
   const handleDelete = async (teamId: string) => {
     try {
-      await axios.delete(`http://localhost:3000/teams?id=${teamId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      await axios.delete(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/teams?id=${teamId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
       setTeamHistory((prevHistory) =>
         prevHistory.filter((team) => team.id !== teamId)
       );
@@ -95,7 +98,7 @@ const TeamsTable = ({
 
     try {
       const response = await axios.put(
-        `http://localhost:3000/teams?id=${teamName}`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/teams?id=${teamName}`,
         updatedTeam,
         {
           headers: {
