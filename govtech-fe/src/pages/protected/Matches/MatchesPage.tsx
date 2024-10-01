@@ -22,19 +22,6 @@ const ERROR_MESSAGES = {
   invalidScores: "Please enter valid numbers for the scores.",
 };
 
-const parseInput = (input: string) => {
-  const inputParts = input.split(" ");
-  if (inputParts.length !== 4) return null;
-
-  const [teamA, teamB, scoreAString, scoreBString] = inputParts;
-  const scoreA = Number(scoreAString);
-  const scoreB = Number(scoreBString);
-
-  if (isNaN(scoreA) || isNaN(scoreB)) return null;
-
-  return { teamA, teamB, scoreA, scoreB };
-};
-
 const MatchesPage = () => {
   const [input, setInput] = useState<string>("");
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
@@ -58,13 +45,20 @@ const MatchesPage = () => {
   }, []);
 
   const handleSubmit = async () => {
-    const parsedInput = parseInput(input);
-    if (!parsedInput) {
+    const inputParts = input.split(" ");
+    if (inputParts.length !== 4) {
       setError(ERROR_MESSAGES.invalidFormat);
       return;
     }
+    const [teamA, teamB, scoreAString, scoreBString] = inputParts;
+    const scoreA = Number(scoreAString);
+    const scoreB = Number(scoreBString);
 
-    const { teamA, teamB, scoreA, scoreB } = parsedInput;
+    if (isNaN(scoreA) || isNaN(scoreB)) {
+      setError(ERROR_MESSAGES.invalidScores);
+      return;
+    }
+
     let newMatch: Match = { teamA, teamB, scoreA, scoreB };
 
     try {
