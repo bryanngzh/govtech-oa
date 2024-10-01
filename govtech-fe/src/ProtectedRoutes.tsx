@@ -1,9 +1,18 @@
+import { Flex, Spinner } from "@chakra-ui/react";
 import { Navigate, Outlet } from "react-router-dom";
 import NavBar from "./components/NavBar";
-import { FIREBASE_AUTH } from "./configs/firebase";
+import useAuthentication from "./hooks/useAuthentication";
 
 const ProtectedRoutes = () => {
-  const user = FIREBASE_AUTH.currentUser;
+  const { user, loading } = useAuthentication();
+
+  if (loading) {
+    return (
+      <Flex height="100vh" alignItems="center" justifyContent="center">
+        <Spinner size="xl" />
+      </Flex>
+    );
+  }
 
   return user ? (
     <>
