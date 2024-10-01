@@ -1,9 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom";
 import NavBar from "./components/NavBar";
-import useAuthentication from "./hooks/useAuthentication";
+import { FIREBASE_AUTH } from "./configs/firebase";
 
 const ProtectedRoutes = () => {
-  const user = useAuthentication();
+  const user = FIREBASE_AUTH.currentUser;
+
   return user ? (
     <>
       <NavBar />
