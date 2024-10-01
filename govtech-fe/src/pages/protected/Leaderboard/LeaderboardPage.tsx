@@ -22,7 +22,7 @@ const useTeamStats = () => {
 
   const fetchTeamStats = async () => {
     const response = await axios.get(
-      "http://localhost:3000/matches/team-stats",
+      `${import.meta.env.VITE_APP_BACKEND_URL}/matches/team-stats`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

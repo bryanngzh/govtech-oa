@@ -25,15 +25,18 @@ const useLogs = () => {
 
   const fetchLogs = useCallback(
     async (lastDoc?: string) => {
-      const response = await axios.get("http://localhost:3000/logs", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        params: {
-          limit,
-          lastDoc,
-        },
-      });
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/logs`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          params: {
+            limit,
+            lastDoc,
+          },
+        }
+      );
       return response.data;
     },
     [accessToken]

@@ -55,7 +55,10 @@ const SignUpPage = () => {
         const data = { name, email };
 
         try {
-          await axios.post("http://localhost:3000/users", data);
+          await axios.post(
+            `${import.meta.env.VITE_APP_BACKEND_URL}/users`,
+            data
+          );
           toast({
             title: "Account created.",
             description: "You have successfully signed up.",

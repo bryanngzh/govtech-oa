@@ -35,11 +35,14 @@ const MatchesPage = () => {
   const fetchMatchHistory = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:3000/matches", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/matches`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
       setMatchHistory(response.data);
     } catch (error) {
       setError((error as Error).message);
@@ -71,7 +74,7 @@ const MatchesPage = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/matches",
+        `${import.meta.env.VITE_APP_BACKEND_URL}/matches`,
         newMatch,
         {
           headers: {

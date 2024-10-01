@@ -11,7 +11,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000", 
+  })
+);
 app.use("/teams", authenticateFirebase);
 app.use("/matches", authenticateFirebase);
 app.use(logMiddleware);
