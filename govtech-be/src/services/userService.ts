@@ -1,8 +1,17 @@
 import { db } from "../configs/firebase";
 import { User } from "../models/userModel";
 
+/**
+ * Service for managing user-related operations.
+ */
 export class UserService {
-  public async get(userEmail: string): Promise<User | null> {
+  /**
+   * Retrieve a user by their email address.
+   * @param userEmail - The email of the user to retrieve.
+   * @returns A promise that resolves to a User object.
+   * @throws Error if the user is not found.
+   */
+  public async get(userEmail: string): Promise<User> {
     const userRef = db.collection("users").where("email", "==", userEmail);
     const userSnapshot = await userRef.get();
 
@@ -13,15 +22,19 @@ export class UserService {
     const userDoc = userSnapshot.docs[0];
     const userData = userDoc.data();
 
-    const user: User = {
+    return {
       id: userDoc.id,
       name: userData.name,
       email: userData.email,
     };
-
-    return user;
   }
 
+  /**
+   * Create a new user.
+   * @param user - The user data to create.
+   * @returns A promise that resolves to the created User object.
+   * @throws Error if the creation fails.
+   */
   public async create(user: User): Promise<User> {
     const userRef = db.collection("users").doc();
 
@@ -30,6 +43,9 @@ export class UserService {
       email: user.email,
     });
 
-    return user;
+    return {
+      ...user,
+      id: userRef.id,
+    };
   }
 }

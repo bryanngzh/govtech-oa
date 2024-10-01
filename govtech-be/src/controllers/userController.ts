@@ -10,19 +10,37 @@ import {
 import { User } from "../models/userModel";
 import { UserService } from "../services/userService";
 
+/**
+ * Controller for managing user-related operations.
+ */
 @Route("users")
 export class UserController extends Controller {
-  @Get()
-  public async getUser(@Query() email: string): Promise<User | null> {
-    const userService = new UserService();
-    return userService.get(email);
+  private userService: UserService;
+
+  constructor() {
+    super();
+    this.userService = new UserService();
   }
 
+  /**
+   * Retrieve a user by their email address.
+   * @param email - User's email address
+   * @returns The user associated with the provided email or null if not found
+   */
+  @Get()
+  public async getUser(@Query() email: string): Promise<User | null> {
+    return this.userService.get(email);
+  }
+
+  /**
+   * Create a new user.
+   * @param requestBody - User data
+   * @returns The created user
+   */
   @SuccessResponse("201", "Created")
   @Post()
   public async createUser(@Body() requestBody: User): Promise<User> {
-    const userService = new UserService();
     this.setStatus(201);
-    return userService.create(requestBody);
+    return this.userService.create(requestBody);
   }
 }
