@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./govtech-fe # Update to point to the govtech-fe folder
+      dockerfile: Dockerfile # Dockerfile path inside govtech-fe
+    ports:
+      - "3000:3000" # Map frontend container port 3000 to host's port 3000
+    env_file:
+      - ./govtech-fe/.env # Load environment variables from the govtech-fe .env file
+    depends_on:
+      - backend # Wait for backend to start
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./govtech-be # Update to point to the govtech-be folder
+      dockerfile: Dockerfile # Dockerfile path inside govtech-be
+    ports:
+      - "3001:3000" # Map backend container port 3000 to host's port 3001
+    volumes:
+      - ./govtech-be/serviceAccountKey.json:/app/serviceAccountKey.json # Mount the serviceAccountKey.json file at runtime
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/serviceAccountKey.json # Set this environment variable in the container
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
