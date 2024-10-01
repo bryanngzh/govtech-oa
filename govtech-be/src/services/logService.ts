@@ -15,7 +15,7 @@ export class LogService {
     limit: number,
     lastDoc?: string
   ): Promise<{ logs: LogEntry[]; nextDoc?: string }> {
-    let query = db.collection("logs").orderBy("timestamp").limit(limit);
+    let query = db.collection("logs").orderBy("timestamp", "desc").limit(limit);
 
     if (lastDoc) {
       const lastSnapshot = await db.collection("logs").doc(lastDoc).get();
