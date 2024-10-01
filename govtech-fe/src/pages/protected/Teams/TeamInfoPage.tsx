@@ -40,7 +40,7 @@ const TeamInfoPage = () => {
     const fetchMatchHistory = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/matches/by-team/?teamId=${teamId}`
+          `http://localhost:3000/matches/by-team?teamId=${teamId}`
         );
         setMatchHistory(response.data);
       } catch (error) {
@@ -51,7 +51,7 @@ const TeamInfoPage = () => {
     const fetchTeamStats = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/matches/team-stats/?teamId=${teamId}`
+          `http://localhost:3000/matches/team-stats?teamId=${teamId}`
         );
         setTeamStat(response.data);
       } catch (error) {

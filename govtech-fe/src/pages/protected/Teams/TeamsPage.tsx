@@ -89,6 +89,7 @@ const TeamsPage = () => {
         }
       });
       setInput("");
+      setError("");
     } catch (error) {
       setError((error as Error).message);
     }
