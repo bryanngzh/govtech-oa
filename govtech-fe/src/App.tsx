@@ -1,6 +1,6 @@
 import { ChakraProvider } from "@chakra-ui/react";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
-import LeaderboardPage from "./pages/protected/LeaderboardPage";
+import LeaderboardPage from "./pages/protected/Leaderboard/LeaderboardPage";
 import MatchesPage from "./pages/protected/Matches/MatchesPage";
 import TeamInfoPage from "./pages/protected/Teams/TeamInfoPage";
 import TeamsPage from "./pages/protected/Teams/TeamsPage";
