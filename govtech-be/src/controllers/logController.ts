@@ -1,4 +1,3 @@
-// src/controllers/logsController.ts
 import { Get, Query, Route } from "tsoa";
 import { LogEntry } from "../models/logModel";
 import { LogService } from "../services/logService";

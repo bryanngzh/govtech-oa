@@ -157,7 +157,7 @@ describe("TeamService", () => {
           id: "team-id",
           data: () => ({
             regDate: new Date().toISOString(),
-            group: "old-group-id", // Old group ID
+            group: "old-group-id",
           }),
         }),
         set: jest.fn(),
@@ -166,7 +166,7 @@ describe("TeamService", () => {
       const mockGroupDocOld = {
         get: jest.fn().mockResolvedValue({
           exists: true,
-          data: () => ({ count: 5 }), // Old count of teams in the old group
+          data: () => ({ count: 5 }),
         }),
         update: jest.fn(),
         delete: jest.fn(),
@@ -175,7 +175,7 @@ describe("TeamService", () => {
       const mockGroupDocNew = {
         get: jest.fn().mockResolvedValue({
           exists: true,
-          data: () => ({ count: 2 }), // New count of teams in the new group
+          data: () => ({ count: 2 }),
         }),
         update: jest.fn(),
         set: jest.fn(),
@@ -184,11 +184,11 @@ describe("TeamService", () => {
       const mockCollection = jest.fn().mockReturnValue({
         doc: jest.fn().mockImplementation((id) => {
           if (id === "team-id") {
-            return mockTeamDoc; // Return the mock for the existing team
+            return mockTeamDoc;
           } else if (id === "old-group-id") {
-            return mockGroupDocOld; // Return the mock for the old group
+            return mockGroupDocOld;
           } else if (id === "group-id") {
-            return mockGroupDocNew; // Return the mock for the new group
+            return mockGroupDocNew;
           }
           return {};
         }),
@@ -197,20 +197,17 @@ describe("TeamService", () => {
         }),
       });
 
-      // Mock Firestore's collection method
       jest.spyOn(db, "collection").mockImplementation(mockCollection);
 
-      // Call the method being tested
       const result = await teamService.createOrUpdate(existingTeam);
 
-      // Assertions to ensure correct behavior
-      expect(result.id).toBe(existingTeam.id); // Check that the returned ID is correct
+      expect(result.id).toBe(existingTeam.id);
       expect(mockTeamDoc.set).toHaveBeenCalledWith({
         regDate: existingTeam.regDate,
         group: existingTeam.group,
       });
-      expect(mockGroupDocOld.update).toHaveBeenCalledWith({ count: 4 }); // Check that the old group count is decremented
-      expect(mockGroupDocNew.update).toHaveBeenCalledWith({ count: 3 }); // Check that the new group count is incremented
+      expect(mockGroupDocOld.update).toHaveBeenCalledWith({ count: 4 });
+      expect(mockGroupDocNew.update).toHaveBeenCalledWith({ count: 3 });
     });
 
     it("should create a new group if it does not exist", async () => {
