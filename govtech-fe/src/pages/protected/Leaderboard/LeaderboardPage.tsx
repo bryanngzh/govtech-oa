@@ -9,18 +9,28 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 import { TeamStat } from "../../../entities/TeamStat";
+import { RootState } from "../../../stores/store";
 import GroupTable from "./GroupTable";
-
-const fetchTeamStats = async () => {
-  const response = await axios.get("http://localhost:3000/matches/team-stats");
-  return response.data;
-};
 
 const useTeamStats = () => {
   const [data, setData] = useState<{ [group: string]: TeamStat[] }>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const accessToken = useSelector((state: RootState) => state.auth.token);
+
+  const fetchTeamStats = async () => {
+    const response = await axios.get(
+      "http://localhost:3000/matches/team-stats",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    return response.data;
+  };
 
   useEffect(() => {
     const fetchData = async () => {

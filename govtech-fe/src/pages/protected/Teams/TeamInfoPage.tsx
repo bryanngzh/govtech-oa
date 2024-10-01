@@ -9,10 +9,12 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { Match } from "../../../entities/Match";
 import { Team } from "../../../entities/Team";
 import { TeamStat } from "../../../entities/TeamStat";
+import { RootState } from "../../../stores/store";
 import MatchHistoryTable from "../Matches/MatchHistoryTable";
 
 const TeamInfoPage = () => {
@@ -23,11 +25,18 @@ const TeamInfoPage = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const accessToken = useSelector((state: RootState) => state.auth.token);
+
   useEffect(() => {
     const fetchTeamInfo = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/teams?id=${teamId}`
+          `http://localhost:3000/teams?id=${teamId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
         );
         setTeam(response.data);
       } catch (error) {
@@ -40,7 +49,12 @@ const TeamInfoPage = () => {
     const fetchMatchHistory = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/matches/by-team?teamId=${teamId}`
+          `http://localhost:3000/matches/by-team?teamId=${teamId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
         );
         setMatchHistory(response.data);
       } catch (error) {
@@ -51,7 +65,12 @@ const TeamInfoPage = () => {
     const fetchTeamStats = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/matches/team-stats?teamId=${teamId}`
+          `http://localhost:3000/matches/team-stats?teamId=${teamId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
         );
         setTeamStat(response.data);
       } catch (error) {

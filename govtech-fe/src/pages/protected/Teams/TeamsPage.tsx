@@ -13,7 +13,9 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { Team } from "../../../entities/Team";
+import { RootState } from "../../../stores/store";
 import TeamsTable from "./TeamsTable";
 
 const TeamsPage = () => {
@@ -22,11 +24,17 @@ const TeamsPage = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const accessToken = useSelector((state: RootState) => state.auth.token);
+
   useEffect(() => {
     const fetchTeamHistory = async () => {
       setLoading(true);
       try {
-        const response = await axios.get("http://localhost:3000/teams");
+        const response = await axios.get("http://localhost:3000/teams", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
         setTeamHistory(response.data);
       } catch (error) {
         setError((error as Error).message);
@@ -74,7 +82,12 @@ const TeamsPage = () => {
     try {
       const response = await axios.post(
         `http://localhost:3000/teams?id=${teamName}`,
-        newTeam
+        newTeam,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
       );
       newTeam = response.data;
       setTeamHistory((prevHistory) => {
