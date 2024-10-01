@@ -9,56 +9,93 @@ import {
   Link,
   Text,
   VStack,
+  useToast,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { FirebaseError } from "firebase/app";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FIREBASE_AUTH } from "../configs/firebase";
 
 const SignUpPage = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
-  const auth = getAuth();
+  const toast = useToast();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      toast({
+        title: "Error",
+        description: "Passwords do not match!",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
       return;
     }
 
+    setLoading(true);
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        FIREBASE_AUTH,
         email,
         password
       );
       const user = userCredential.user;
-      console.log(user);
 
       if (user) {
-        const data = {
-          name,
-          email,
-        };
+        const data = { name, email };
+
         try {
           await axios.post("http://localhost:3000/users", data);
+          toast({
+            title: "Account created.",
+            description: "You have successfully signed up.",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+          navigate("/");
         } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to create user profile.",
+            status: "error",
+            duration: 5000,
+            isClosable: true,
+          });
           console.error("Error:", error);
         }
-        navigate("/");
       }
     } catch (error: unknown) {
       if (error instanceof FirebaseError) {
-        console.error("Error signing up:", error.message);
+        toast({
+          title: "Error signing up",
+          description: error.message,
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
       } else {
-        console.error("Unknown error occurred during sign up.");
+        toast({
+          title: "Error",
+          description: "Unknown error occurred during sign up.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+        console.error("Error during sign up:", error);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -111,7 +148,12 @@ const SignUpPage = () => {
               />
             </FormControl>
 
-            <Button type="submit" colorScheme="blue" width="full">
+            <Button
+              type="submit"
+              colorScheme="blue"
+              width="full"
+              isLoading={loading}
+            >
               Sign Up
             </Button>
           </VStack>
@@ -119,7 +161,7 @@ const SignUpPage = () => {
 
         <Text mt={4} textAlign="center">
           Already have an account?{" "}
-          <Link color="blue.500" href="/signin">
+          <Link color="blue.500" href="/login">
             Login
           </Link>
         </Text>
