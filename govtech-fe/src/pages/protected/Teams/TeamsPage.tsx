@@ -116,7 +116,7 @@ const TeamsPage = () => {
 
       <VStack spacing={4} align="stretch" mb={8}>
         <FormControl>
-          <FormLabel>Add or Update Team Details</FormLabel>
+          <FormLabel>Add Team Details</FormLabel>
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
