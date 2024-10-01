@@ -2,35 +2,26 @@ import {
   Alert,
   AlertIcon,
   Box,
-  Button,
   Flex,
   Heading,
   Spinner,
-  Table,
-  TableCaption,
-  Tbody,
-  Td,
   Text,
-  Th,
-  Thead,
-  Tr,
-  useDisclosure,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Match } from "../../../entities/Match";
 import { Team } from "../../../entities/Team";
-import EditMatchesModal from "../Matches/EditMatchesModal";
+import { TeamStat } from "../../../entities/TeamStat";
+import MatchHistoryTable from "../Matches/MatchHistoryTable";
 
 const TeamInfoPage = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const [team, setTeam] = useState<Team | null>(null);
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
+  const [teamStat, setTeamStat] = useState<TeamStat | null>();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
 
   useEffect(() => {
     const fetchTeamInfo = async () => {
@@ -57,59 +48,21 @@ const TeamInfoPage = () => {
       }
     };
 
-    fetchTeamInfo();
-    fetchMatchHistory();
-  }, [teamId]);
-
-  const openEditModal = (match: Match) => {
-    setSelectedMatch(match);
-    onOpen();
-  };
-
-  const handleUpdate = async (updatedInput: string) => {
-    if (!selectedMatch) return;
-
-    const inputParts = updatedInput.split(" ");
-    if (inputParts.length !== 4) {
-      setError(
-        "Please enter data in the format: <teamA> <teamB> <scoreA> <scoreB>"
-      );
-      return;
-    }
-
-    const [teamA, teamB, scoreAString, scoreBString] = inputParts;
-
-    const scoreA = Number(scoreAString);
-    const scoreB = Number(scoreBString);
-
-    if (isNaN(scoreA) || isNaN(scoreB)) {
-      setError("Please enter valid numbers for the scores.");
-      return;
-    }
-
-    const updatedMatch: Match = {
-      teamA,
-      teamB,
-      scoreA,
-      scoreB,
+    const fetchTeamStats = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:3000/matches/team-stats/?teamId=${teamId}`
+        );
+        setTeamStat(response.data);
+      } catch (error) {
+        console.log((error as Error).message);
+      }
     };
 
-    try {
-      await axios.put(
-        `http://localhost:3000/matches?id=${selectedMatch.id as string}`,
-        updatedMatch
-      );
-      setMatchHistory((prevHistory) =>
-        prevHistory.map((match) =>
-          match.id === selectedMatch.id ? updatedMatch : match
-        )
-      );
-      onClose();
-      setSelectedMatch(null);
-    } catch (error) {
-      setError((error as Error).message);
-    }
-  };
+    fetchTeamInfo();
+    fetchMatchHistory();
+    fetchTeamStats();
+  }, [teamId]);
 
   if (loading) {
     return (
@@ -118,29 +71,6 @@ const TeamInfoPage = () => {
       </Flex>
     );
   }
-
-  if (error) {
-    return (
-      <Alert status="error">
-        <AlertIcon />
-        {error}
-      </Alert>
-    );
-  }
-
-  const handleDelete = async (matchId: string) => {
-    setLoading(true);
-    try {
-      await axios.delete(`http://localhost:3000/matches?id=${matchId}`);
-      setMatchHistory((prevHistory) =>
-        prevHistory.filter((match) => match.id !== matchId)
-      );
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
@@ -163,6 +93,25 @@ const TeamInfoPage = () => {
           ) : (
             <Text>No team data found.</Text>
           )}
+          {teamStat && (
+            <Box>
+              <Text fontSize="lg">
+                <strong>Wins:</strong> {teamStat.wins}
+              </Text>
+              <Text fontSize="lg">
+                <strong>Loss:</strong> {teamStat.losses}
+              </Text>
+              <Text fontSize="lg">
+                <strong>Draw:</strong> {teamStat.draws}
+              </Text>
+              <Text fontSize="lg">
+                <strong>Points:</strong> {teamStat.points}
+              </Text>
+              <Text fontSize="lg">
+                <strong>Alternative Points:</strong> {teamStat.altPoints}
+              </Text>
+            </Box>
+          )}
         </Box>
 
         {error && (
@@ -174,49 +123,13 @@ const TeamInfoPage = () => {
 
         {matchHistory && (
           <Box p={5}>
-            <Heading size="md" mb={4}>
-              Match History
-            </Heading>
-            <Table variant="simple">
-              <TableCaption>Previous Matches</TableCaption>
-              <Thead>
-                <Tr>
-                  <Th>Team A</Th>
-                  <Th>Team B</Th>
-                  <Th>Score A</Th>
-                  <Th>Score B</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {matchHistory.map((match, index) => (
-                  <Tr key={index}>
-                    <Td>{match.teamA}</Td>
-                    <Td>{match.teamB}</Td>
-                    <Td>{match.scoreA}</Td>
-                    <Td>{match.scoreB}</Td>
-                    <Td>
-                      <Button onClick={() => openEditModal(match)}>Edit</Button>
-                      <Button
-                        ml={2}
-                        colorScheme="red"
-                        onClick={() => handleDelete(match.id as string)}
-                      >
-                        Delete
-                      </Button>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
+            <MatchHistoryTable
+              matchHistory={matchHistory}
+              setMatchHistory={setMatchHistory}
+              setError={setError}
+            />
           </Box>
         )}
-        <EditMatchesModal
-          isOpen={isOpen}
-          onClose={onClose}
-          selectedMatch={selectedMatch}
-          handleUpdate={handleUpdate}
-        />
       </Box>
     </>
   );

@@ -32,7 +32,11 @@ const EditTeamModal = ({
     if (selectedTeam) {
       setLocalInput(
         `${selectedTeam.id} ${new Date(selectedTeam.regDate).toLocaleDateString(
-          "en-GB"
+          "en-GB",
+          {
+            day: "2-digit",
+            month: "2-digit",
+          }
         )} ${selectedTeam.group}`
       );
     }

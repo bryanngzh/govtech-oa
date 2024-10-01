@@ -9,142 +9,75 @@ import {
   Heading,
   Input,
   Spinner,
-  Table,
-  TableCaption,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
   VStack,
-  useDisclosure,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { Match } from "../../../entities/Match";
-import EditMatchesModal from "./EditMatchesModal";
+import MatchHistoryTable from "./MatchHistoryTable";
+
+const ERROR_MESSAGES = {
+  invalidFormat:
+    "Please enter data in the format: <teamA> <teamB> <scoreA> <scoreB>",
+  invalidScores: "Please enter valid numbers for the scores.",
+};
+
+const parseInput = (input: string) => {
+  const inputParts = input.split(" ");
+  if (inputParts.length !== 4) return null;
+
+  const [teamA, teamB, scoreAString, scoreBString] = inputParts;
+  const scoreA = Number(scoreAString);
+  const scoreB = Number(scoreBString);
+
+  if (isNaN(scoreA) || isNaN(scoreB)) return null;
+
+  return { teamA, teamB, scoreA, scoreB };
+};
 
 const MatchesPage = () => {
   const [input, setInput] = useState<string>("");
   const [matchHistory, setMatchHistory] = useState<Match[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
-
-  useEffect(() => {
-    const fetchMatchHistory = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get("http://localhost:3000/matches");
-        setMatchHistory(response.data);
-      } catch (error) {
-        setError((error as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMatchHistory();
-  }, []);
-
-  const handleSubmit = async () => {
-    const inputParts = input.split(" ");
-    if (inputParts.length !== 4) {
-      setError(
-        "Please enter data in the format: <teamA> <teamB> <scoreA> <scoreB>"
-      );
-      return;
-    }
-
-    const [teamA, teamB, scoreAString, scoreBString] = inputParts;
-
-    const scoreA = Number(scoreAString);
-    const scoreB = Number(scoreBString);
-
-    if (isNaN(scoreA) || isNaN(scoreB)) {
-      setError("Please enter valid numbers for the scores.");
-      return;
-    }
-
-    const newMatch: Match = {
-      teamA,
-      teamB,
-      scoreA,
-      scoreB,
-    };
-
-    try {
-      await axios.post("http://localhost:3000/matches", newMatch);
-      setMatchHistory((prevHistory) => [...prevHistory, newMatch]);
-      setInput("");
-    } catch (error) {
-      setError((error as Error).message);
-    }
-  };
-
-  const openEditModal = (match: Match) => {
-    setSelectedMatch(match);
-    onOpen();
-  };
-
-  const handleUpdate = async (updatedInput: string) => {
-    if (!selectedMatch) return;
-
-    const inputParts = updatedInput.split(" ");
-    if (inputParts.length !== 4) {
-      setError(
-        "Please enter data in the format: <teamA> <teamB> <scoreA> <scoreB>"
-      );
-      return;
-    }
-
-    const [teamA, teamB, scoreAString, scoreBString] = inputParts;
-
-    const scoreA = Number(scoreAString);
-    const scoreB = Number(scoreBString);
-
-    if (isNaN(scoreA) || isNaN(scoreB)) {
-      setError("Please enter valid numbers for the scores.");
-      return;
-    }
-
-    const updatedMatch: Match = {
-      teamA,
-      teamB,
-      scoreA,
-      scoreB,
-    };
-
-    try {
-      await axios.put(
-        `http://localhost:3000/matches?id=${selectedMatch.id as string}`,
-        updatedMatch
-      );
-      setMatchHistory((prevHistory) =>
-        prevHistory.map((match) =>
-          match.id === selectedMatch.id ? updatedMatch : match
-        )
-      );
-      onClose();
-      setSelectedMatch(null);
-    } catch (error) {
-      setError((error as Error).message);
-    }
-  };
-
-  const handleDelete = async (matchId: string) => {
+  const fetchMatchHistory = async () => {
     setLoading(true);
     try {
-      await axios.delete(`http://localhost:3000/matches?id=${matchId}`);
-      setMatchHistory((prevHistory) =>
-        prevHistory.filter((match) => match.id !== matchId)
-      );
+      const response = await axios.get("http://localhost:3000/matches");
+      setMatchHistory(response.data);
     } catch (error) {
       setError((error as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMatchHistory();
+  }, []);
+
+  const handleSubmit = async () => {
+    const parsedInput = parseInput(input);
+    if (!parsedInput) {
+      setError(ERROR_MESSAGES.invalidFormat);
+      return;
+    }
+
+    const { teamA, teamB, scoreA, scoreB } = parsedInput;
+    let newMatch: Match = { teamA, teamB, scoreA, scoreB };
+
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/matches",
+        newMatch
+      );
+      newMatch = response.data;
+      setMatchHistory((prevHistory) => [...prevHistory, newMatch]);
+      setError(null);
+      setInput("");
+    } catch (error) {
+      setError((error as Error).message);
     }
   };
 
@@ -167,65 +100,33 @@ const MatchesPage = () => {
         </Button>
       </VStack>
 
-      {error && (
+      {matchHistory.length !== 0 && error && (
         <Alert status="error" mb={4}>
           <AlertIcon />
           {error}
         </Alert>
       )}
 
-      {loading && (
+      {loading ? (
         <Flex justifyContent="center" alignItems="center" h="100vh">
           <Spinner size="xl" />
         </Flex>
+      ) : (
+        <>
+          {matchHistory.length === 0 ? (
+            <Alert status="info" mb={4}>
+              <AlertIcon />
+              No matches available at the moment.
+            </Alert>
+          ) : (
+            <MatchHistoryTable
+              matchHistory={matchHistory}
+              setMatchHistory={setMatchHistory}
+              setError={setError}
+            />
+          )}
+        </>
       )}
-
-      {!loading && (
-        <Box>
-          <Heading size="md" mb={4}>
-            Match History
-          </Heading>
-          <Table variant="simple">
-            <TableCaption>Previous Matches</TableCaption>
-            <Thead>
-              <Tr>
-                <Th>Team A</Th>
-                <Th>Team B</Th>
-                <Th>Score A</Th>
-                <Th>Score B</Th>
-                <Th>Actions</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {matchHistory.map((match, index) => (
-                <Tr key={index}>
-                  <Td>{match.teamA}</Td>
-                  <Td>{match.teamB}</Td>
-                  <Td>{match.scoreA}</Td>
-                  <Td>{match.scoreB}</Td>
-                  <Td>
-                    <Button onClick={() => openEditModal(match)}>Edit</Button>
-                    <Button
-                      ml={2}
-                      colorScheme="red"
-                      onClick={() => handleDelete(match.id as string)}
-                    >
-                      Delete
-                    </Button>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-      )}
-
-      <EditMatchesModal
-        isOpen={isOpen}
-        onClose={onClose}
-        selectedMatch={selectedMatch}
-        handleUpdate={handleUpdate}
-      />
     </Box>
   );
 };
