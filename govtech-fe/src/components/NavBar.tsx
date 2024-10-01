@@ -26,7 +26,10 @@ const NavBar = () => {
           <Link as={RouterLink} to="/matches" color="white" mx={2}>
             Matches
           </Link>
-          <Link onClick={handleLogout} mx={2}>
+          <Link as={RouterLink} to="/logs" color="white" mx={2}>
+            Logs
+          </Link>
+          <Link onClick={handleLogout} color="white" mx={2}>
             Log Out
           </Link>
         </Flex>
