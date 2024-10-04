@@ -285,7 +285,7 @@ describe("MatchService", () => {
         id: "match1",
         teamA: "team1",
         teamB: "team2",
-        scoreA: "3" as any, // Invalid score type
+        scoreA: "3" as any,
         scoreB: 2,
       };
 
@@ -300,7 +300,7 @@ describe("MatchService", () => {
         teamA: "team1",
         teamB: "team2",
         scoreA: 3,
-        scoreB: "2" as any, // Invalid score type
+        scoreB: "2" as any,
       };
 
       await expect(matchService.update("match1", updatedMatch)).rejects.toThrow(
