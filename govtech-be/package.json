@@ -12,8 +12,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/morgan": "^1.9.9",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "firebase-admin": "^12.5.0",
@@ -22,8 +20,10 @@
     "tsoa": "^6.4.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.13",
+    "@types/morgan": "^1.9.9",
     "@types/node": "^22.7.4",
     "@types/supertest": "^6.0.2",
     "firebase-mock": "^2.3.2",
