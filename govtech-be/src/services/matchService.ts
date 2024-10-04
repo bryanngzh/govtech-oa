@@ -3,9 +3,9 @@ import {
   QueryDocumentSnapshot,
   QuerySnapshot,
 } from "firebase-admin/firestore";
-import { Team } from "src/models/teamModel";
+import { Team } from "src/models/TeamModel";
 import { db } from "../configs/firebase";
-import { Match, TeamStat } from "../models/matchModel";
+import { Match, TeamStat } from "../models/MatchModel";
 
 export class MatchService {
   /** Helper Functions */

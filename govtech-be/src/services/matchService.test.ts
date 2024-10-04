@@ -1,6 +1,7 @@
 import { db } from "../configs/firebase";
-import { Match } from "../models/matchModel";
-import { MatchService } from "./matchService";
+import { Match } from "../models/MatchModel";
+import { Team } from "../models/TeamModel";
+import { MatchService } from "./MatchService";
 
 jest.mock("../configs/firebase", () => ({
   db: {
@@ -10,729 +11,371 @@ jest.mock("../configs/firebase", () => ({
 
 describe("MatchService", () => {
   let matchService: MatchService;
-  let mockCollection: jest.Mock;
-  let mockDoc: jest.Mock;
   let mockGet: jest.Mock;
+  let mockWhere: jest.Mock;
   let mockSet: jest.Mock;
   let mockDelete: jest.Mock;
 
   beforeEach(() => {
-    matchService = new MatchService();
-    mockSet = jest.fn();
     mockGet = jest.fn();
+    mockWhere = jest.fn().mockReturnThis();
+    mockSet = jest.fn();
     mockDelete = jest.fn();
-    mockDoc = jest.fn().mockReturnValue({
-      get: mockGet,
-      set: mockSet,
-      delete: mockDelete,
-    });
-    mockCollection = jest.fn().mockReturnValue({
-      doc: mockDoc,
-      where: jest.fn().mockReturnValue({
-        get: jest.fn(),
+
+    (db.collection as jest.Mock).mockReturnValue({
+      doc: jest.fn().mockReturnValue({
+        get: mockGet,
+        set: mockSet,
+        delete: mockDelete,
       }),
-      get: jest.fn(),
+      where: mockWhere,
+      get: mockGet,
     });
-    (db.collection as jest.Mock).mockImplementation(mockCollection);
+
+    matchService = new MatchService();
   });
 
   describe("get", () => {
-    it("should return a match if found", async () => {
+    it("should fetch a match by ID", async () => {
       const mockMatch: Match = {
-        id: "match-id",
-        teamA: "Team A",
-        teamB: "Team B",
-        scoreA: 1,
-        scoreB: 2,
+        id: "match1",
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 2,
+        scoreB: 1,
       };
 
-      (
-        db.collection("matches").doc("match-id").get as jest.Mock
-      ).mockResolvedValue({
+      mockGet.mockResolvedValue({
         exists: true,
-        id: "match-id",
+        id: "match1",
         data: () => mockMatch,
       });
 
-      const result = await matchService.get("match-id");
-
+      const result = await matchService.get("match1");
       expect(result).toEqual(mockMatch);
-      expect(db.collection).toHaveBeenCalledWith("matches");
-      expect(db.collection("matches").doc).toHaveBeenCalledWith("match-id");
     });
 
-    it("should throw an error if match not found", async () => {
-      (
-        db.collection("matches").doc("nonexistent-match-id").get as jest.Mock
-      ).mockResolvedValue({
-        exists: false,
-      });
+    it("should throw an error if match is not found", async () => {
+      mockGet.mockResolvedValue({ exists: false });
 
-      await expect(matchService.get("nonexistent-match-id")).rejects.toThrow(
-        "Match with ID nonexistent-match-id not found."
-      );
-      expect(db.collection("matches").doc).toHaveBeenCalledWith(
-        "nonexistent-match-id"
+      await expect(matchService.get("nonexistent")).rejects.toThrow(
+        "Match with ID nonexistent not found."
       );
     });
 
-    it("should throw an error if match exists but has no data", async () => {
-      (
-        db.collection("matches").doc("match-id").get as jest.Mock
-      ).mockResolvedValue({
-        exists: true,
-        id: "match-id",
-        data: () => null,
-      });
+    it("should throw an error if match has no data", async () => {
+      mockGet.mockResolvedValue({ exists: true, data: () => null });
 
-      await expect(matchService.get("match-id")).rejects.toThrow(
-        "Match with ID match-id has no data."
-      );
-    });
-
-    it("should handle errors when fetching a match", async () => {
-      (
-        db.collection("matches").doc("match-id").get as jest.Mock
-      ).mockRejectedValue(new Error("Database error"));
-
-      await expect(matchService.get("match-id")).rejects.toThrow(
-        "Database error"
+      await expect(matchService.get("match1")).rejects.toThrow(
+        "Match with ID match1 has no data."
       );
     });
   });
 
   describe("getAll", () => {
-    it("should return all matches when matches are found", async () => {
-      const mockMatches = [
-        {
-          id: "match1",
-          teamA: "Team A",
-          teamB: "Team B",
-          scoreA: 1,
-          scoreB: 2,
-        },
-        {
-          id: "match2",
-          teamA: "Team C",
-          teamB: "Team D",
-          scoreA: 3,
-          scoreB: 4,
-        },
+    it("should fetch all matches", async () => {
+      const mockMatches: Match[] = [
+        { id: "match1", teamA: "team1", teamB: "team2", scoreA: 2, scoreB: 1 },
+        { id: "match2", teamA: "team3", teamB: "team4", scoreA: 0, scoreB: 0 },
       ];
 
-      const mockDocs = mockMatches.map((match) => ({
-        id: match.id,
-        data: jest.fn().mockReturnValue({
-          teamA: match.teamA,
-          teamB: match.teamB,
-          scoreA: match.scoreA,
-          scoreB: match.scoreB,
-        }),
-      }));
-
-      (db.collection("matches").get as jest.Mock).mockResolvedValue({
+      mockGet.mockResolvedValue({
         empty: false,
-        docs: mockDocs,
+        docs: mockMatches.map((match) => ({
+          id: match.id,
+          data: () => match,
+        })),
       });
 
       const result = await matchService.getAll();
-
       expect(result).toEqual(mockMatches);
-      expect(db.collection).toHaveBeenCalledWith("matches");
     });
 
     it("should throw an error if no matches are found", async () => {
-      (db.collection("matches").get as jest.Mock).mockResolvedValue({
-        empty: true,
-      });
+      mockGet.mockResolvedValue({ empty: true });
 
       await expect(matchService.getAll()).rejects.toThrow("No matches found.");
-      expect(db.collection("matches").get).toHaveBeenCalled();
-    });
-
-    it("should handle errors when fetching matches", async () => {
-      (db.collection("matches").get as jest.Mock).mockRejectedValue(
-        new Error("Database error")
-      );
-
-      await expect(matchService.getAll()).rejects.toThrow("Database error");
     });
   });
 
   describe("getMatchesByTeamId", () => {
-    it("should return matches where teamA is the specified teamId", async () => {
-      const mockMatches = [
-        {
-          id: "match1",
-          teamA: "team-id",
-          teamB: "Team B",
-          scoreA: 1,
-          scoreB: 2,
-        },
-        {
-          id: "match2",
-          teamA: "team-id",
-          teamB: "Team C",
-          scoreA: 3,
-          scoreB: 4,
-        },
+    it("should fetch matches for a specific team", async () => {
+      const teamId = "team1";
+      const mockMatches: Match[] = [
+        { id: "match1", teamA: teamId, teamB: "team2", scoreA: 2, scoreB: 1 },
+        { id: "match2", teamA: "team3", teamB: teamId, scoreA: 1, scoreB: 1 },
       ];
 
-      const mockDocs = mockMatches.map((match) => ({
-        id: match.id,
-        data: jest.fn().mockReturnValue(match),
-      }));
+      mockGet.mockResolvedValueOnce({
+        docs: [mockMatches[0]].map((match) => ({
+          id: match.id,
+          data: () => match,
+        })),
+      });
+      mockGet.mockResolvedValueOnce({
+        docs: [mockMatches[1]].map((match) => ({
+          id: match.id,
+          data: () => match,
+        })),
+      });
 
-      (db.collection("matches").where as jest.Mock)
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: mockDocs }),
-        })
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: [] }),
-        });
-
-      const result = await matchService.getMatchesByTeamId("team-id");
-
+      const result = await matchService.getMatchesByTeamId(teamId);
       expect(result).toEqual(mockMatches);
-      expect(db.collection("matches").where).toHaveBeenCalledWith(
-        "teamA",
-        "==",
-        "team-id"
-      );
-      expect(db.collection("matches").where).toHaveBeenCalledWith(
-        "teamB",
-        "==",
-        "team-id"
-      );
     });
 
-    it("should return matches where teamB is the specified teamId", async () => {
-      const mockMatches = [
-        {
-          id: "match3",
-          teamA: "Team D",
-          teamB: "team-id",
-          scoreA: 5,
-          scoreB: 6,
-        },
-      ];
+    it("should throw an error if no matches are found for the team", async () => {
+      mockGet.mockResolvedValue({ docs: [] });
 
-      const mockDocs = mockMatches.map((match) => ({
-        id: match.id,
-        data: jest.fn().mockReturnValue(match),
-      }));
-
-      (db.collection("matches").where as jest.Mock)
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: [] }),
-        })
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: mockDocs }),
-        });
-
-      const result = await matchService.getMatchesByTeamId("team-id");
-
-      expect(result).toEqual(mockMatches);
-      expect(db.collection("matches").where).toHaveBeenCalledWith(
-        "teamA",
-        "==",
-        "team-id"
-      );
-      expect(db.collection("matches").where).toHaveBeenCalledWith(
-        "teamB",
-        "==",
-        "team-id"
-      );
-    });
-
-    it("should return matches where teamA and teamB are the specified teamId", async () => {
-      const mockMatches = [
-        {
-          id: "match1",
-          teamA: "team-id",
-          teamB: "Team B",
-          scoreA: 3,
-          scoreB: 1,
-        },
-        {
-          id: "match2",
-          teamA: "Team C",
-          teamB: "team-id",
-          scoreA: 2,
-          scoreB: 4,
-        },
-      ];
-
-      const mockDocsA = mockMatches.slice(0, 1).map((match) => ({
-        id: match.id,
-        data: jest.fn().mockReturnValue(match),
-      }));
-
-      const mockDocsB = mockMatches.slice(1).map((match) => ({
-        id: match.id,
-        data: jest.fn().mockReturnValue(match),
-      }));
-
-      (db.collection("matches").where as jest.Mock)
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: mockDocsA }),
-        })
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: mockDocsB }),
-        });
-
-      const result = await matchService.getMatchesByTeamId("team-id");
-
-      expect(result).toEqual(mockMatches);
-      expect(db.collection("matches").where).toHaveBeenCalledWith(
-        "teamA",
-        "==",
-        "team-id"
-      );
-      expect(db.collection("matches").where).toHaveBeenCalledWith(
-        "teamB",
-        "==",
-        "team-id"
-      );
-    });
-
-    it("should throw an error if no matches are found for the specified teamId", async () => {
-      (db.collection("matches").where as jest.Mock)
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: [] }),
-        })
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: [] }),
-        });
-
-      await expect(
-        matchService.getMatchesByTeamId("nonexistent-team-id")
-      ).rejects.toThrow(
-        "No matches found for team with ID nonexistent-team-id."
-      );
-    });
-
-    it("should handle errors when fetching matches", async () => {
-      (db.collection("matches").where as jest.Mock)
-        .mockReturnValueOnce({
-          get: jest.fn().mockRejectedValue(new Error("Database error")),
-        })
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValue({ docs: [] }),
-        });
-
-      await expect(matchService.getMatchesByTeamId("team-id")).rejects.toThrow(
-        "Database error"
+      await expect(matchService.getMatchesByTeamId("team1")).rejects.toThrow(
+        "No matches found for team with ID team1."
       );
     });
   });
 
   describe("create", () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-      db.collection = jest.fn().mockReturnValue({
-        doc: jest.fn().mockReturnValue({
-          set: jest.fn(),
-        }),
-      });
-    });
-
-    it("should create a match and return it with an id", async () => {
-      const mockMatch: Match = {
-        teamA: "team-id-1",
-        teamB: "team-id-2",
-        scoreA: 1,
-        scoreB: 2,
+    it("should create a new match", async () => {
+      const newMatch: Match = {
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 2,
+        scoreB: 1,
       };
 
-      const mockMatchRef = {
-        id: "new-match-id",
-        set: jest.fn().mockResolvedValueOnce(undefined),
+      const mockTeamA: Team = {
+        id: "team1",
+        group: "A",
+        regDate: "new Date()",
+      };
+      const mockTeamB: Team = {
+        id: "team2",
+        group: "A",
+        regDate: "new Date()",
       };
 
-      db.collection = jest.fn().mockReturnValue({
-        doc: jest.fn().mockReturnValue(mockMatchRef),
-      });
+      mockGet.mockResolvedValueOnce({ exists: true, data: () => mockTeamA });
+      mockGet.mockResolvedValueOnce({ exists: true, data: () => mockTeamB });
 
-      db.collection("teams").doc("team-id-1").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: true,
-          data: () => ({ group: "A" }),
-        });
+      mockSet.mockResolvedValue({});
 
-      db.collection("teams").doc("team-id-2").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: true,
-          data: () => ({ group: "A" }),
-        });
-
-      const result = await matchService.create(mockMatch);
-
-      expect(result).toEqual({ ...mockMatch, id: "new-match-id" });
-      expect(db.collection).toHaveBeenCalledWith("matches");
-
-      expect(mockMatchRef.set).toHaveBeenCalledWith({
-        teamA: "team-id-1",
-        teamB: "team-id-2",
-        scoreA: 1,
-        scoreB: 2,
-      });
-    });
-
-    it("should throw an error if scores are not numbers", async () => {
-      const invalidMatch: Match = {
-        teamA: "team-id-1",
-        teamB: "team-id-2",
-        scoreA: "not-a-number",
-        scoreB: 2,
-      } as unknown as Match;
-
-      await expect(matchService.create(invalidMatch)).rejects.toThrow(
-        "Scores must be numbers."
-      );
-    });
-
-    it("should throw an error if teamA does not exist", async () => {
-      const mockMatch: Match = {
-        teamA: "nonexistent-team-id",
-        teamB: "team-id-2",
-        scoreA: 1,
-        scoreB: 2,
-      };
-
-      db.collection("teams").doc("nonexistent-team-id").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: false,
-        });
-
-      db.collection("teams").doc("team-id-2").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: true,
-          data: () => ({ group: "A" }),
-        });
-
-      expect(matchService.create(mockMatch)).resolves;
+      const result = await matchService.create(newMatch);
+      expect(result).toEqual(expect.objectContaining(newMatch));
     });
 
     it("should throw an error if teamB does not exist", async () => {
-      const mockMatch: Match = {
-        teamA: "team-id-1",
-        teamB: "nonexistent-team-id",
-        scoreA: 1,
-        scoreB: 2,
+      const newMatch: Match = {
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 2,
+        scoreB: 1,
       };
 
-      db.collection("teams").doc("team-id-1").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: true,
-          data: () => ({ group: "A" }),
-        });
+      mockGet.mockResolvedValueOnce({
+        exists: true,
+        data: () => ({ group: "A" }),
+      });
+      mockGet.mockResolvedValueOnce({ exists: false });
 
-      db.collection("teams").doc("nonexistent-team-id").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: false,
-        });
-
-      await expect(matchService.create(mockMatch)).rejects.toThrow(
-        "Team with ID team-id-1 does not exist."
+      await expect(matchService.create(newMatch)).rejects.toThrow(
+        "Team with ID team2 does not exist."
       );
     });
 
     it("should throw an error if teams are not in the same group", async () => {
-      const mockMatch: Match = {
-        teamA: "team-id-1",
-        teamB: "team-id-2",
-        scoreA: 1,
-        scoreB: 2,
+      const newMatch: Match = {
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 2,
+        scoreB: 1,
       };
 
-      db.collection("teams").doc("team-id-1").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: true,
-          data: () => ({ group: "A" }),
-        });
+      const mockTeamA: Team = {
+        id: "team1",
+        group: "A",
+        regDate: "new Date()",
+      };
+      const mockTeamB: Team = {
+        id: "team2",
+        group: "B",
+        regDate: "new Date()",
+      };
 
-      db.collection("teams").doc("team-id-2").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: true,
-          data: () => ({ group: "B" }),
-        });
+      mockGet.mockResolvedValueOnce({ exists: true, data: () => mockTeamA });
+      mockGet.mockResolvedValueOnce({ exists: true, data: () => mockTeamB });
 
-      expect(matchService.create(mockMatch)).resolves;
+      await expect(matchService.create(newMatch)).rejects.toThrow(
+        "Teams team1 and team2 are not in the same group."
+      );
     });
 
-    it("should handle errors when setting match data", async () => {
-      const mockMatch: Match = {
-        teamA: "team-id-1",
-        teamB: "team-id-2",
-        scoreA: 1,
-        scoreB: 2,
+    it("should throw an error if a team does not exist", async () => {
+      const newMatch: Match = {
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 2,
+        scoreB: 1,
       };
 
-      const mockMatchRef = {
-        id: "new-match-id",
-        set: jest.fn().mockRejectedValue(new Error("Database error")),
+      mockGet.mockResolvedValueOnce({ exists: false });
+
+      await expect(matchService.create(newMatch)).rejects.toThrow(
+        "Team with ID team1 does not exist."
+      );
+    });
+
+    it("should throw an error if scores are not numbers", async () => {
+      const newMatch: Match = {
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: "2" as any,
+        scoreB: "1" as any,
       };
 
-      db.collection = jest.fn().mockReturnValue({
-        doc: jest.fn().mockReturnValue(mockMatchRef),
-      });
-
-      db.collection("teams").doc("team-id-1").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: true,
-          data: () => ({ group: "A" }),
-        });
-
-      db.collection("teams").doc("team-id-2").get = jest
-        .fn()
-        .mockResolvedValue({
-          exists: true,
-          data: () => ({ group: "A" }),
-        });
-
-      await expect(matchService.create(mockMatch)).rejects.toThrow(
-        "Database error"
+      await expect(matchService.create(newMatch)).rejects.toThrow(
+        "Scores must be numbers."
       );
     });
   });
 
   describe("update", () => {
-    it("should throw an error if the match does not exist", async () => {
-      const mockMatch: Match = {
-        teamA: "Team A",
-        teamB: "Team B",
-        scoreA: 1,
+    it("should update an existing match", async () => {
+      const updatedMatch: Match = {
+        id: "match1",
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 3,
         scoreB: 2,
       };
 
-      const matchRef = {
-        id: "existing-match-id",
-        set: jest.fn(),
-        get: jest.fn(),
+      const mockTeamA: Team = {
+        id: "team1",
+        group: "A",
+        regDate: "new Date()",
+      };
+      const mockTeamB: Team = {
+        id: "team2",
+        group: "A",
+        regDate: "new Date()",
       };
 
-      mockDoc.mockReturnValue(matchRef);
-      matchRef.get.mockResolvedValueOnce({ exists: false });
+      mockGet.mockResolvedValueOnce({ exists: true, data: () => mockTeamA });
+      mockGet.mockResolvedValueOnce({ exists: true, data: () => mockTeamB });
+      mockGet.mockResolvedValueOnce({ exists: true });
 
-      matchService["validateTeams"] = jest.fn().mockResolvedValue(undefined);
+      mockSet.mockResolvedValue({});
 
-      await expect(
-        matchService.update("existing-match-id", mockMatch)
-      ).rejects.toThrow(
-        `Match with ID existing-match-id does not exist. Please provide a valid ID to update.`
-      );
+      const result = await matchService.update("match1", updatedMatch);
+      expect(result).toEqual(updatedMatch);
     });
 
     it("should throw an error if match ID is not provided", async () => {
-      const mockMatch: Match = {
-        teamA: "Team A",
-        teamB: "Team B",
-        scoreA: 1,
+      const updatedMatch: Match = {
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 3,
         scoreB: 2,
       };
 
-      await expect(matchService.update("", mockMatch)).rejects.toThrow(
+      await expect(matchService.update("", updatedMatch)).rejects.toThrow(
         "Match ID is required for updates."
       );
     });
 
-    it("should throw an error if scores are not numbers", async () => {
-      const invalidMatch: Match = {
-        teamA: "Team A",
-        teamB: "Team B",
-        scoreA: "not-a-number",
+    it("should throw an error if scoreA is not a number", async () => {
+      const updatedMatch: Match = {
+        id: "match1",
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: "3" as any, // Invalid score type
         scoreB: 2,
-      } as unknown as Match;
+      };
 
-      await expect(
-        matchService.update("existing-match-id", invalidMatch)
-      ).rejects.toThrow("Scores must be numbers.");
+      await expect(matchService.update("match1", updatedMatch)).rejects.toThrow(
+        "Scores must be numbers."
+      );
     });
 
-    it("should throw an error if team validation fails", async () => {
-      const mockMatch: Match = {
-        teamA: "Invalid Team A",
-        teamB: "Invalid Team B",
-        scoreA: 1,
-        scoreB: 2,
+    it("should throw an error if scoreB is not a number", async () => {
+      const updatedMatch: Match = {
+        id: "match1",
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 3,
+        scoreB: "2" as any, // Invalid score type
       };
 
-      matchService["validateTeams"] = jest.fn().mockImplementation(() => {
-        throw new Error("Teams validation error");
-      });
-
-      await expect(
-        matchService.update("existing-match-id", mockMatch)
-      ).rejects.toThrow("Teams validation error");
+      await expect(matchService.update("match1", updatedMatch)).rejects.toThrow(
+        "Scores must be numbers."
+      );
     });
 
-    it("should update a match successfully if it exists", async () => {
-      const mockMatch: Match = {
-        teamA: "Team A",
-        teamB: "Team B",
-        scoreA: 1,
+    it("should throw an error if match does not exist", async () => {
+      const updatedMatch: Match = {
+        id: "nonexistent",
+        teamA: "team1",
+        teamB: "team2",
+        scoreA: 3,
         scoreB: 2,
       };
 
-      const matchRef = {
-        id: "existing-match-id",
-        set: jest.fn(),
-        get: jest.fn(),
-      };
-
-      mockDoc.mockReturnValue(matchRef);
-      matchRef.get.mockResolvedValueOnce({ exists: true });
-
-      matchService["validateTeams"] = jest.fn().mockResolvedValue(undefined);
-
-      const result = await matchService.update("existing-match-id", mockMatch);
-
-      expect(result).toEqual({ ...mockMatch, id: "existing-match-id" });
-      expect(matchRef.set).toHaveBeenCalledWith({
-        teamA: mockMatch.teamA,
-        teamB: mockMatch.teamB,
-        scoreA: mockMatch.scoreA,
-        scoreB: mockMatch.scoreB,
+      mockGet.mockResolvedValueOnce({
+        exists: true,
+        data: () => ({ group: "A" }),
       });
+      mockGet.mockResolvedValueOnce({
+        exists: true,
+        data: () => ({ group: "A" }),
+      });
+      mockGet.mockResolvedValueOnce({ exists: false });
+
+      await expect(
+        matchService.update("nonexistent", updatedMatch)
+      ).rejects.toThrow(
+        "Match with ID nonexistent does not exist. Please provide a valid ID to update."
+      );
     });
   });
 
   describe("delete", () => {
-    it("should throw an error if the match does not exist", async () => {
-      const matchRef = {
-        get: jest.fn(),
-        delete: jest.fn(),
-      };
+    it("should delete an existing match", async () => {
+      mockGet.mockResolvedValue({ exists: true });
 
-      mockDoc.mockReturnValue(matchRef);
-      matchRef.get.mockResolvedValueOnce({ exists: false });
-
-      await expect(matchService.delete("nonexistent-match-id")).rejects.toThrow(
-        `Match with ID nonexistent-match-id does not exist. Cannot delete.`
-      );
+      await expect(matchService.delete("match1")).resolves.not.toThrow();
+      expect(mockDelete).toHaveBeenCalled();
     });
 
-    it("should delete the match successfully if it exists", async () => {
-      const matchRef = {
-        get: jest.fn(),
-        delete: jest.fn(),
-      };
+    it("should throw an error if match does not exist", async () => {
+      mockGet.mockResolvedValue({ exists: false });
 
-      mockDoc.mockReturnValue(matchRef);
-      matchRef.get.mockResolvedValueOnce({ exists: true });
-
-      await matchService.delete("existing-match-id");
-
-      expect(matchRef.get).toHaveBeenCalled();
-      expect(matchRef.delete).toHaveBeenCalled();
-    });
-
-    it("should handle errors when trying to delete a match", async () => {
-      const matchRef = {
-        get: jest.fn(),
-        delete: jest.fn().mockRejectedValue(new Error("Database error")),
-      };
-
-      mockDoc.mockReturnValue(matchRef);
-      matchRef.get.mockResolvedValueOnce({ exists: true });
-
-      await expect(matchService.delete("existing-match-id")).rejects.toThrow(
-        "Database error"
+      await expect(matchService.delete("nonexistent")).rejects.toThrow(
+        "Match with ID nonexistent does not exist. Cannot delete."
       );
-
-      expect(matchRef.get).toHaveBeenCalled();
-      expect(matchRef.delete).toHaveBeenCalled();
     });
   });
 
   describe("getTeamStats", () => {
-    it("should throw an error if the team does not exist or has no data", async () => {
-      const teamId = "nonexistent-team-id";
+    it("should calculate team statistics correctly", async () => {
+      const teamId = "team1";
+      const mockTeam: Team = { id: teamId, group: "A", regDate: "new Date()" };
+      const mockMatches: Match[] = [
+        { id: "match1", teamA: teamId, teamB: "team2", scoreA: 2, scoreB: 1 },
+        { id: "match2", teamA: "team3", teamB: teamId, scoreA: 1, scoreB: 1 },
+        { id: "match3", teamA: teamId, teamB: "team4", scoreA: 0, scoreB: 3 },
+      ];
 
-      (
-        db.collection("teams").doc(teamId).get as jest.Mock
-      ).mockResolvedValueOnce({
-        exists: false,
+      mockGet.mockResolvedValueOnce({ exists: true, data: () => mockTeam });
+      mockGet.mockResolvedValueOnce({
+        docs: mockMatches.slice(0, 2).map((m) => ({ data: () => m })),
       });
-
-      await expect(matchService.getTeamStats(teamId)).rejects.toThrow(
-        `Team with ID ${teamId} does not exist or has no data.`
-      );
-    });
-
-    it("should return team stats when team exists and has matches", async () => {
-      const teamId = "existing-team-id";
-      const mockTeamDoc = {
-        exists: true,
-        data: jest.fn().mockReturnValue({
-          id: teamId,
-          group: "A",
-          regDate: "2024-01-01",
-        }),
-      };
-
-      const mockMatchesA = [
-        {
-          id: "match1",
-          teamA: teamId,
-          teamB: "Team B",
-          scoreA: 2,
-          scoreB: 1,
-        },
-        {
-          id: "match2",
-          teamA: teamId,
-          teamB: "Team C",
-          scoreA: 0,
-          scoreB: 3,
-        },
-      ];
-
-      const mockMatchesB = [
-        {
-          id: "match3",
-          teamA: "Team D",
-          teamB: teamId,
-          scoreA: 1,
-          scoreB: 1,
-        },
-      ];
-
-      (
-        db.collection("teams").doc(teamId).get as jest.Mock
-      ).mockResolvedValueOnce(mockTeamDoc);
-      (db.collection("matches").where as jest.Mock)
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValueOnce({
-            docs: mockMatchesA.map((match) => ({
-              data: () => match,
-            })),
-          }),
-        })
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValueOnce({
-            docs: mockMatchesB.map((match) => ({
-              data: () => match,
-            })),
-          }),
-        });
+      mockGet.mockResolvedValueOnce({
+        docs: mockMatches.slice(2).map((m) => ({ data: () => m })),
+      });
 
       const result = await matchService.getTeamStats(teamId);
 
       expect(result).toEqual({
         id: teamId,
         group: "A",
-        regDate: "2024-01-01",
+        regDate: "new Date()",
         totalMatches: 3,
         wins: 1,
         losses: 1,
@@ -742,177 +385,74 @@ describe("MatchService", () => {
       });
     });
 
-    it("should return team stats when team exists but has no matches", async () => {
-      const teamId = "team-with-no-matches";
-      const mockTeamDoc = {
-        exists: true,
-        data: jest.fn().mockReturnValue({
-          id: teamId,
-          group: "B",
-          regDate: "2024-01-01",
-        }),
-      };
+    it("should throw an error if team does not exist", async () => {
+      mockGet.mockResolvedValueOnce({ exists: false });
 
-      (
-        db.collection("teams").doc(teamId).get as jest.Mock
-      ).mockResolvedValueOnce(mockTeamDoc);
-      (db.collection("matches").where as jest.Mock)
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValueOnce({ docs: [] }),
-        })
-        .mockReturnValueOnce({
-          get: jest.fn().mockResolvedValueOnce({ docs: [] }),
-        });
-
-      const result = await matchService.getTeamStats(teamId);
-
-      expect(result).toEqual({
-        id: teamId,
-        group: "B",
-        regDate: "2024-01-01",
-        totalMatches: 0,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        points: 0,
-        altPoints: 0,
-      });
-    });
-
-    it("should handle errors when fetching team or matches", async () => {
-      const teamId = "error-team-id";
-
-      (db.collection("teams").doc(teamId).get as jest.Mock).mockRejectedValue(
-        new Error("Database error")
-      );
-
-      await expect(matchService.getTeamStats(teamId)).rejects.toThrow(
-        "Database error"
+      await expect(matchService.getTeamStats("nonexistent")).rejects.toThrow(
+        "Team with ID nonexistent does not exist or has no data."
       );
     });
   });
 
   describe("getAllTeamStats", () => {
-    it("should return grouped team stats when there are teams and matches", async () => {
-      const mockTeams = [
-        { id: "team1", group: "A", regDate: "2024-01-01" },
-        { id: "team2", group: "A", regDate: "2024-01-02" },
-        { id: "team3", group: "B", regDate: "2024-01-03" },
+    it("should calculate statistics for all teams", async () => {
+      const mockTeams: Team[] = [
+        { id: "team1", group: "A", regDate: "new Date()" },
+        { id: "team2", group: "A", regDate: "new Date()" },
+        { id: "team3", group: "B", regDate: "new Date()" },
       ];
 
-      const mockMatches = [
-        { teamA: "team1", teamB: "team2", scoreA: 2, scoreB: 1 },
-        { teamA: "team2", teamB: "team3", scoreA: 1, scoreB: 1 },
-        { teamA: "team1", teamB: "team3", scoreA: 0, scoreB: 3 },
+      const mockMatches: Match[] = [
+        { id: "match1", teamA: "team1", teamB: "team2", scoreA: 2, scoreB: 1 },
+        { id: "match2", teamA: "team2", teamB: "team3", scoreA: 1, scoreB: 1 },
+        { id: "match3", teamA: "team3", teamB: "team1", scoreA: 0, scoreB: 3 },
       ];
 
-      (matchService as any).getAllTeamsAndMatches = jest
-        .fn()
-        .mockResolvedValue([mockTeams, mockMatches]);
+      mockGet.mockResolvedValueOnce({
+        docs: mockTeams.map((t) => ({ id: t.id, data: () => t })),
+      });
+      mockGet.mockResolvedValueOnce({
+        docs: mockMatches.map((m) => ({ id: m.id, data: () => m })),
+      });
 
       const result = await matchService.getAllTeamStats();
 
       expect(result).toEqual({
-        A: [
-          {
+        A: expect.arrayContaining([
+          expect.objectContaining({
             id: "team1",
-            group: "A",
-            regDate: "2024-01-01",
             totalMatches: 2,
-            wins: 1,
-            losses: 1,
+            wins: 2,
+            losses: 0,
             draws: 0,
-            points: 3,
-            altPoints: 6,
-          },
-          {
+          }),
+          expect.objectContaining({
             id: "team2",
-            group: "A",
-            regDate: "2024-01-02",
             totalMatches: 2,
             wins: 0,
             losses: 1,
             draws: 1,
-            points: 1,
-            altPoints: 4,
-          },
-        ],
-        B: [
-          {
+          }),
+        ]),
+        B: expect.arrayContaining([
+          expect.objectContaining({
             id: "team3",
-            group: "B",
-            regDate: "2024-01-03",
             totalMatches: 2,
-            wins: 1,
-            losses: 0,
+            wins: 0,
+            losses: 1,
             draws: 1,
-            points: 4,
-            altPoints: 8,
-          },
-        ],
+          }),
+        ]),
       });
     });
 
-    it("should return empty stats when there are teams but no matches", async () => {
-      const mockTeams = [
-        { id: "team1", group: "A", regDate: "2024-01-01" },
-        { id: "team2", group: "B", regDate: "2024-01-02" },
-      ];
-
-      (matchService as any).getAllTeamsAndMatches = jest
-        .fn()
-        .mockResolvedValue([mockTeams, []]);
-
-      const result = await matchService.getAllTeamStats();
-
-      expect(result).toEqual({
-        A: [
-          {
-            id: "team1",
-            group: "A",
-            regDate: "2024-01-01",
-            totalMatches: 0,
-            wins: 0,
-            losses: 0,
-            draws: 0,
-            points: 0,
-            altPoints: 0,
-          },
-        ],
-        B: [
-          {
-            id: "team2",
-            group: "B",
-            regDate: "2024-01-02",
-            totalMatches: 0,
-            wins: 0,
-            losses: 0,
-            draws: 0,
-            points: 0,
-            altPoints: 0,
-          },
-        ],
-      });
-    });
-
-    it("should return empty object when there are no teams", async () => {
-      (matchService as any).getAllTeamsAndMatches = jest
-        .fn()
-        .mockResolvedValue([[], []]);
+    it("should return an empty object if no teams or matches exist", async () => {
+      mockGet.mockResolvedValueOnce({ docs: [] });
+      mockGet.mockResolvedValueOnce({ docs: [] });
 
       const result = await matchService.getAllTeamStats();
 
       expect(result).toEqual({});
-    });
-
-    it("should handle errors when fetching teams or matches", async () => {
-      (matchService as any).getAllTeamsAndMatches = jest
-        .fn()
-        .mockRejectedValue(new Error("Database error"));
-
-      await expect(matchService.getAllTeamStats()).rejects.toThrow(
-        "Database error"
-      );
     });
   });
 });

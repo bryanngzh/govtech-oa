@@ -1,6 +1,6 @@
 import { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { db } from "../configs/firebase";
-import { Team } from "../models/teamModel";
+import { Team } from "../models/TeamModel";
 
 /**
  * Service for managing team-related operations.

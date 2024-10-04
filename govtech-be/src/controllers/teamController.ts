@@ -9,8 +9,8 @@ import {
   Route,
   SuccessResponse,
 } from "tsoa";
-import { Team } from "../models/teamModel";
-import { TeamService } from "../services/teamService";
+import { Team } from "../models/TeamModel";
+import { TeamService } from "../services/TeamService";
 
 /**
  * Controller for managing team-related operations.

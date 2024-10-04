@@ -1,5 +1,5 @@
-import { Team } from "../src/models/teamModel";
-import { TeamService } from "../src/services/teamService";
+import { Team } from "../src/models/TeamModel";
+import { TeamService } from "../src/services/TeamService";
 
 const teamService = new TeamService();
 

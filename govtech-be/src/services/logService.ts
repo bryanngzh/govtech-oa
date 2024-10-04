@@ -1,4 +1,4 @@
-import { LogEntry } from "src/models/logModel";
+import { LogEntry } from "src/models/LogModel";
 import { db } from "../configs/firebase";
 
 /**

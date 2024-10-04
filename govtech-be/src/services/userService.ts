@@ -1,5 +1,5 @@
 import { db } from "../configs/firebase";
-import { User } from "../models/userModel";
+import { User } from "../models/UserModel";
 
 /**
  * Service for managing user-related operations.

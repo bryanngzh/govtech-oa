@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import * as admin from "firebase-admin";
-import { LogEntry } from "src/models/logModel";
+import { LogEntry } from "src/models/LogModel";
 
 const logMiddleware = async (
   req: Request,

@@ -1,7 +1,10 @@
-import { db } from "../configs/firebase";
-import { User } from "../models/userModel";
-import { UserService } from "./userService";
+// userService.test.ts
 
+import { db } from "../configs/firebase"; // adjust path as needed
+import { User } from "../models/UserModel";
+import { UserService } from "./UserService"; // adjust path as needed
+
+// Mock the db collection and methods
 jest.mock("../configs/firebase", () => ({
   db: {
     collection: jest.fn(),
@@ -10,87 +13,143 @@ jest.mock("../configs/firebase", () => ({
 
 describe("UserService", () => {
   let userService: UserService;
-  let mockCollection: jest.Mock;
-  let mockWhere: jest.Mock;
-  let mockGet: jest.Mock;
-  let mockSet: jest.Mock;
-  let mockDoc: jest.Mock;
 
   beforeEach(() => {
     userService = new UserService();
-    mockSet = jest.fn();
-    mockGet = jest.fn();
-    mockDoc = jest.fn().mockReturnValue({ set: mockSet });
-    mockWhere = jest.fn().mockReturnValue({ get: mockGet });
-    mockCollection = jest.fn().mockReturnValue({
-      where: mockWhere,
-      doc: mockDoc,
-    });
-    (db.collection as jest.Mock).mockImplementation(mockCollection);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe("get", () => {
-    it("should throw an error if user not found", async () => {
-      const mockQuerySnapshot = {
-        empty: true,
-        docs: [],
+    it("should retrieve a user by email", async () => {
+      // Mock Firestore behavior
+      const mockUserSnapshot = {
+        empty: false,
+        docs: [
+          {
+            id: "user123",
+            data: () => ({
+              name: "John Doe",
+              email: "johndoe@example.com",
+            }),
+          },
+        ],
       };
-      mockGet.mockResolvedValue(mockQuerySnapshot);
+      const mockWhere = jest.fn().mockReturnValue({
+        get: jest.fn().mockResolvedValue(mockUserSnapshot),
+      });
+      (db.collection as jest.Mock).mockReturnValue({
+        where: mockWhere,
+      });
 
+      // Call the method
+      const user = await userService.get("johndoe@example.com");
+
+      // Assertions
+      expect(user).toEqual({
+        id: "user123",
+        name: "John Doe",
+        email: "johndoe@example.com",
+      });
+      expect(db.collection).toHaveBeenCalledWith("users");
+      expect(mockWhere).toHaveBeenCalledWith(
+        "email",
+        "==",
+        "johndoe@example.com"
+      );
+    });
+
+    it("should throw an error if user is not found", async () => {
+      // Mock Firestore behavior for an empty result
+      const mockUserSnapshot = { empty: true };
+      const mockWhere = jest.fn().mockReturnValue({
+        get: jest.fn().mockResolvedValue(mockUserSnapshot),
+      });
+      (db.collection as jest.Mock).mockReturnValue({
+        where: mockWhere,
+      });
+
+      // Expect the service to throw an error
       await expect(userService.get("nonexistent@example.com")).rejects.toThrow(
         "User with email nonexistent@example.com not found."
       );
 
-      expect(mockCollection).toHaveBeenCalledWith("users");
+      // Assertions
+      expect(db.collection).toHaveBeenCalledWith("users");
       expect(mockWhere).toHaveBeenCalledWith(
         "email",
         "==",
         "nonexistent@example.com"
       );
     });
-
-    it("should return user if found", async () => {
-      const mockUser: User = {
-        id: "123",
-        name: "John Doe",
-        email: "john@example.com",
-      };
-
-      const mockDocSnapshot = {
-        id: "123",
-        data: () => mockUser,
-      };
-
-      const mockQuerySnapshot = {
-        empty: false,
-        docs: [mockDocSnapshot],
-      };
-
-      mockGet.mockResolvedValue(mockQuerySnapshot);
-
-      const result = await userService.get("john@example.com");
-
-      expect(result).toEqual(mockUser);
-      expect(mockCollection).toHaveBeenCalledWith("users");
-      expect(mockWhere).toHaveBeenCalledWith("email", "==", "john@example.com");
-    });
   });
 
   describe("create", () => {
     it("should create a new user", async () => {
-      const newUser: User = {
-        id: "456",
+      // Mock Firestore behavior for creating a new user
+      const mockSet = jest.fn().mockResolvedValue(undefined);
+      const mockDoc = jest.fn().mockReturnValue({
+        id: "newUserId",
+        set: mockSet,
+      });
+      (db.collection as jest.Mock).mockReturnValue({
+        doc: mockDoc,
+      });
+
+      const user: User = {
         name: "Jane Doe",
-        email: "jane@example.com",
+        email: "janedoe@example.com",
+        id: undefined, // ID will be generated
       };
 
-      const result = await userService.create(newUser);
+      // Call the method
+      const createdUser = await userService.create(user);
 
-      expect(result).toEqual(newUser);
-      expect(mockCollection).toHaveBeenCalledWith("users");
+      // Assertions
+      expect(createdUser).toEqual({
+        ...user,
+        id: "newUserId",
+      });
+      expect(db.collection).toHaveBeenCalledWith("users");
+      expect(mockDoc).toHaveBeenCalled();
       expect(mockSet).toHaveBeenCalledWith({
-        name: newUser.name,
-        email: newUser.email,
+        name: "Jane Doe",
+        email: "janedoe@example.com",
+      });
+    });
+
+    it("should throw an error if creation fails", async () => {
+      // Mock Firestore behavior for a failure
+      const mockSet = jest
+        .fn()
+        .mockRejectedValue(new Error("Failed to create user"));
+      const mockDoc = jest.fn().mockReturnValue({
+        id: "newUserId",
+        set: mockSet,
+      });
+      (db.collection as jest.Mock).mockReturnValue({
+        doc: mockDoc,
+      });
+
+      const user: User = {
+        name: "Jane Doe",
+        email: "janedoe@example.com",
+        id: undefined,
+      };
+
+      // Expect the service to throw an error
+      await expect(userService.create(user)).rejects.toThrow(
+        "Failed to create user"
+      );
+
+      // Assertions
+      expect(db.collection).toHaveBeenCalledWith("users");
+      expect(mockDoc).toHaveBeenCalled();
+      expect(mockSet).toHaveBeenCalledWith({
+        name: "Jane Doe",
+        email: "janedoe@example.com",
       });
     });
   });

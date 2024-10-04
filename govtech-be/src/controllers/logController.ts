@@ -1,6 +1,6 @@
 import { Get, Query, Route } from "tsoa";
-import { LogEntry } from "../models/logModel";
-import { LogService } from "../services/logService";
+import { LogEntry } from "../models/LogModel";
+import { LogService } from "../services/LogService";
 
 @Route("logs")
 export class LogController {

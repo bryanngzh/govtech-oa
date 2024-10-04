@@ -7,8 +7,8 @@ import {
   Route,
   SuccessResponse,
 } from "tsoa";
-import { User } from "../models/userModel";
-import { UserService } from "../services/userService";
+import { User } from "../models/UserModel";
+import { UserService } from "../services/UserService";
 
 /**
  * Controller for managing user-related operations.

@@ -9,8 +9,8 @@ import {
   Route,
   SuccessResponse,
 } from "tsoa";
-import { Match, TeamStat } from "../models/matchModel";
-import { MatchService } from "../services/matchService";
+import { Match, TeamStat } from "../models/MatchModel";
+import { MatchService } from "../services/MatchService";
 
 /**
  * Controller for managing match-related operations.

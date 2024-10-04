@@ -1,5 +1,5 @@
-import { Match } from "../src/models/matchModel";
-import { MatchService } from "../src/services/matchService";
+import { Match } from "../src/models/MatchModel";
+import { MatchService } from "../src/services/MatchService";
 
 const matchService = new MatchService();
 
