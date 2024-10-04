@@ -13,7 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: "http://localhost:3000", 
+    origin: "http://localhost:3000",
   })
 );
 app.use("/teams", authenticateFirebase);
@@ -24,7 +24,7 @@ app.use(logMiddleware);
 RegisterRoutes(app);
 
 // start server
-const port = 3000;
+const port = 3001;
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });

@@ -19,7 +19,7 @@ services:
       context: ./govtech-be # Update to point to the govtech-be folder
       dockerfile: Dockerfile # Dockerfile path inside govtech-be
     ports:
-      - "3001:3000" # Map backend container port 3000 to host's port 3001
+      - "3001:3001" # Map backend container port 3001 to host's port 3001
     volumes:
       - ./govtech-be/serviceAccountKey.json:/app/serviceAccountKey.json # Mount the serviceAccountKey.json file at runtime
     environment:
