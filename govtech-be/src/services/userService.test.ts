@@ -1,10 +1,7 @@
-// userService.test.ts
-
-import { db } from "../configs/firebase"; // adjust path as needed
+import { db } from "../configs/firebase";
 import { User } from "../models/userModel";
-import { UserService } from "./userService"; // adjust path as needed
+import { UserService } from "./userService";
 
-// Mock the db collection and methods
 jest.mock("../configs/firebase", () => ({
   db: {
     collection: jest.fn(),
@@ -24,7 +21,6 @@ describe("UserService", () => {
 
   describe("get", () => {
     it("should retrieve a user by email", async () => {
-      // Mock Firestore behavior
       const mockUserSnapshot = {
         empty: false,
         docs: [
@@ -44,10 +40,8 @@ describe("UserService", () => {
         where: mockWhere,
       });
 
-      // Call the method
       const user = await userService.get("johndoe@example.com");
 
-      // Assertions
       expect(user).toEqual({
         id: "user123",
         name: "John Doe",
@@ -62,7 +56,6 @@ describe("UserService", () => {
     });
 
     it("should throw an error if user is not found", async () => {
-      // Mock Firestore behavior for an empty result
       const mockUserSnapshot = { empty: true };
       const mockWhere = jest.fn().mockReturnValue({
         get: jest.fn().mockResolvedValue(mockUserSnapshot),
@@ -71,12 +64,10 @@ describe("UserService", () => {
         where: mockWhere,
       });
 
-      // Expect the service to throw an error
       await expect(userService.get("nonexistent@example.com")).rejects.toThrow(
         "User with email nonexistent@example.com not found."
       );
 
-      // Assertions
       expect(db.collection).toHaveBeenCalledWith("users");
       expect(mockWhere).toHaveBeenCalledWith(
         "email",
@@ -88,7 +79,6 @@ describe("UserService", () => {
 
   describe("create", () => {
     it("should create a new user", async () => {
-      // Mock Firestore behavior for creating a new user
       const mockSet = jest.fn().mockResolvedValue(undefined);
       const mockDoc = jest.fn().mockReturnValue({
         id: "newUserId",
@@ -101,13 +91,11 @@ describe("UserService", () => {
       const user: User = {
         name: "Jane Doe",
         email: "janedoe@example.com",
-        id: undefined, // ID will be generated
+        id: undefined,
       };
 
-      // Call the method
       const createdUser = await userService.create(user);
 
-      // Assertions
       expect(createdUser).toEqual({
         ...user,
         id: "newUserId",
@@ -121,7 +109,6 @@ describe("UserService", () => {
     });
 
     it("should throw an error if creation fails", async () => {
-      // Mock Firestore behavior for a failure
       const mockSet = jest
         .fn()
         .mockRejectedValue(new Error("Failed to create user"));
@@ -139,12 +126,10 @@ describe("UserService", () => {
         id: undefined,
       };
 
-      // Expect the service to throw an error
       await expect(userService.create(user)).rejects.toThrow(
         "Failed to create user"
       );
 
-      // Assertions
       expect(db.collection).toHaveBeenCalledWith("users");
       expect(mockDoc).toHaveBeenCalled();
       expect(mockSet).toHaveBeenCalledWith({
